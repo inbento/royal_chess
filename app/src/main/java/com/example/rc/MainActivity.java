@@ -10,43 +10,98 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.example.rc.database.DatabaseHelper;
+import com.example.rc.models.GameStat;
+import com.example.rc.models.User;
+
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button btnStart, btnKings, btnStats, btnExit;
+    private Button btnStart, btnKings, btnUser, btnExit;
     private ImageButton btnLanguage, btnRules;
     private String currentLanguage = "ru";
+    private DatabaseHelper dbHelper;
+    private User currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (!isUserLoggedIn()) {
+            goToLoginActivity();
+            return;
+        }
 
         loadLanguagePreference();
         setLocale(currentLanguage);
 
         setContentView(R.layout.activity_main);
 
+        dbHelper = new DatabaseHelper(this);
+        loadCurrentUser();
+
         initViews();
         setupButtonListeners();
         setupBackPressedHandler();
+        updateUserButton();
     }
 
+    private boolean isUserLoggedIn() {
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        return prefs.getBoolean("isLoggedIn", false);
+    }
+
+    private void goToLoginActivity() {
+        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+        startActivity(intent);
+        finish();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadCurrentUser();
+        updateUserButton();
+    }
+
+    private int getCurrentUserId() {
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        return prefs.getInt("currentUserId", -1);
+    }
+
+    private void loadCurrentUser() {
+        int userId = getCurrentUserId();
+        if (userId != -1) {
+            currentUser = dbHelper.getUser(userId);
+        } else {
+            currentUser = dbHelper.getCurrentUser();
+        }
+    }
     private void initViews() {
         btnLanguage = findViewById(R.id.btnLanguage);
         btnStart = findViewById(R.id.btnStart);
         btnKings = findViewById(R.id.btnKings);
-        btnStats = findViewById(R.id.btnStats);
+        btnUser = findViewById(R.id.btnStats);
         btnExit = findViewById(R.id.btnExit);
         btnRules = findViewById(R.id.btnRules);
     }
 
+
+    private void updateUserButton() {
+        if (currentUser != null) {
+            btnUser.setText(currentUser.getUsername());
+        }
+    }
     private void loadLanguagePreference() {
         SharedPreferences preferences = getSharedPreferences("AppSettings", MODE_PRIVATE);
         currentLanguage = preferences.getString("language", "ru");
@@ -90,10 +145,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        btnStats.setOnClickListener(new View.OnClickListener() {
+        btnUser.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showStatistics();
+                openUserProfile();
             }
         });
 
@@ -186,7 +241,7 @@ public class MainActivity extends AppCompatActivity {
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
-    private void showStatistics() {
+    private void openUserProfile() {
         Intent intent = new Intent(MainActivity.this, StatisticActivity.class);
         startActivity(intent);
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);

@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.GridLayout;
@@ -18,6 +19,9 @@ import com.example.rc.adapters.PromotionAdapter;
 import com.example.rc.chess.ChessBoard;
 import com.example.rc.chess.ChessPiece;
 import com.example.rc.chess.ChessTimer;
+import com.example.rc.database.DatabaseHelper;
+import com.example.rc.models.GameStat;
+import com.example.rc.models.User;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +39,7 @@ public class ChessGameActivity extends AppCompatActivity
     private RecyclerView rvPromotion;
     private PromotionAdapter promotionAdapter;
     private List<String> moves = new ArrayList<>();
+    private int movesCount = 0;
     private LinearLayout promotionDialog;
 
     private int promotionRow = -1;
@@ -45,6 +50,7 @@ public class ChessGameActivity extends AppCompatActivity
     private View indicatorWhite, indicatorBlack;
     private boolean isTimedGame = true;
     private long gameTimeSeconds = 600;
+    private long gameStartTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +63,9 @@ public class ChessGameActivity extends AppCompatActivity
             gameTimeSeconds = extras.getInt("game_time_seconds", 600);
             isTimedGame = extras.getBoolean("is_timed_game", true);
         }
+
+        gameStartTime = System.currentTimeMillis();
+        movesCount = 0;
 
         initViews();
         setupChessBoard();
@@ -179,6 +188,7 @@ public class ChessGameActivity extends AppCompatActivity
 
         if (chessBoard.getSelectedPiece() != null) {
             if (chessBoard.movePiece(row, col)) {
+                movesCount++;
                 if (isTimedGame && chessTimer != null) {
                     chessTimer.switchTurn();
                 }
@@ -331,6 +341,10 @@ public class ChessGameActivity extends AppCompatActivity
             chessTimer.stop();
         }
 
+        int gameDuration = (int) ((System.currentTimeMillis() - gameStartTime) / 1000);
+
+        saveGameResult(isWhiteWinner, gameDuration);
+
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Игра окончена!")
                 .setMessage("ШАХ И МАТ!\nПобедили: " + (isWhiteWinner ? "Белые" : "Черные"))
@@ -340,8 +354,29 @@ public class ChessGameActivity extends AppCompatActivity
                 .show();
     }
 
+    private void saveGameResult(boolean isWhiteWinner, int durationSeconds) {
+
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        User currentUser = dbHelper.getCurrentUser();
+
+        if (currentUser != null) {
+            GameStat stat = new GameStat(
+                    currentUser.getId(),
+                    isPlayerWhite == isWhiteWinner ? "win" : "loss",
+                    isPlayerWhite ? "white" : "black",
+                    durationSeconds,
+                    this.movesCount
+            );
+
+
+            dbHelper.addGameStat(stat);
+        }
+    }
+
     private void restartGame() {
         chessBoard = new ChessBoard();
+        movesCount = 0;
+        gameStartTime = System.currentTimeMillis();
         if (isTimedGame) {
             if (chessTimer != null) {
                 chessTimer.reset(gameTimeSeconds * 1000);

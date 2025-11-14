@@ -10,30 +10,6 @@
     <string name="english">Английский</string>
 
     <string name="statistics_title">Статистика</string>
-    <string name="general_statistics">ОБЩАЯ СТАТИСТИКА</string>
-    <string name="wins_by_color">ПОБЕДЫ ПО ЦВЕТАМ</string>
-    <string name="white_wins_stat">Белые: 12 побед</string>
-    <string name="black_wins_stat">Черные: 8 побед</string>
-    <string name="kings_statistics">СТАТИСТИКА КОРОЛЕЙ</string>
-    <string name="human_king">Король людей: 7 игр</string>
-    <string name="dragon_king">Король драконов: 5 игр</string>
-    <string name="elf_king">Король эльфов: 3 игры</string>
-    <string name="gnom_king">Король гномов: 5 игр</string>
-    <string name="captured_pieces">СЪЕДЕННЫЕ ФИГУРЫ</string>
-    <string name="total_pieces">Всего: 147 фигур</string>
-    <string name="pawns">Пешки: 89</string>
-    <string name="rooks">Ладьи: 18</string>
-    <string name="knights">Кони: 15</string>
-    <string name="bishops">Слоны: 12</string>
-    <string name="queens">Ферзи: 10</string>
-    <string name="game_time">ВРЕМЯ В ИГРЕ</string>
-    <string name="total_time">Общее время: 45ч 32м</string>
-    <string name="avg_game">Средняя игра: 25м</string>
-    <string name="max_session">Максимальная сессия: 3ч 15м</string>
-    <string name="additional">ДОПОЛНИТЕЛЬНО</string>
-    <string name="total_games">Всего игр: 20</string>
-    <string name="draws">Ничьих: 0</string>
-    <string name="best_streak">Лучшая серия: 5 побед</string>
 
     <string name="choose_color">Выберите цвет фигур</string>
     <string name="white_pieces">Белые</string>
@@ -93,5 +69,12 @@
     <string name="king_dragon_ability">🔥 Дыхание дракона: может сжечь одну вражескую фигуру за игру</string>
     <string name="king_elf_ability">🌿 Лесная магия:</string>
     <string name="king_gnom_ability">⚒️ Подземные ходы: пешки могут двигаться назад</string>
+
+    <string name="player_profile">Профиль игрока</string>
+    <string name="change_username">Сменить имя</string>
+    <string name="total_games">Всего игр</string>
+    <string name="wins">Побед</string>
+    <string name="losses">Поражений</string>
+    <string name="win_percentage">Процент побед</string>
 
 </resources>
