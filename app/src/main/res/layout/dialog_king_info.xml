@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@drawable/dialog_bg">
+
+    <ImageView
+        android:id="@+id/ivKingDialog"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:scaleType="centerCrop" />
+
+    <TextView
+        android:id="@+id/tvKingName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Король Артур"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:textColor="#000000"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tvKingFaction"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Фракция: Люди"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:id="@+id/tvKingDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Описание короля..."
+        android:textSize="14sp"
+        android:textColor="#000000"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:id="@+id/tvKingAbility"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Способность: ..."
+        android:textSize="14sp"
+        android:textColor="#2E7D32"
+        android:textStyle="italic" />
+
+</LinearLayout>

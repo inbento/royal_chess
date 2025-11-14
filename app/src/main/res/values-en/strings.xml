@@ -87,4 +87,9 @@
 
     <string name="open_with">Open with</string>
 
+    <string name="king_man_ability">⚔️ Battle Inspiration:</string>
+    <string name="king_dragon_ability">🔥 Dragon Breath: can burn one enemy piece per game</string>
+    <string name="king_elf_ability">🌿 Forest Magic:</string>
+    <string name="king_gnom_ability">⚒️ Underground Moves: pawns can move backwards</string>
+
 </resources>

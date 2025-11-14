@@ -41,7 +41,7 @@ public class KingsAdapter extends RecyclerView.Adapter<KingsAdapter.KingViewHold
         holder.tvKingName.setText(king.getName());
         holder.tvKingDescription.setText(king.getDescription());
 
-        holder.tvKingFaction.setText(holder.itemView.getContext().getString(king.getFaction()));
+        holder.tvKingFaction.setText(king.getFaction());
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
@@ -68,7 +68,6 @@ public class KingsAdapter extends RecyclerView.Adapter<KingsAdapter.KingViewHold
         return kings != null ? kings.size() : 0;
     }
 
-    // Обновление данных
     public void updateKings(List<King> newKings) {
         this.kings = newKings;
         notifyDataSetChanged();

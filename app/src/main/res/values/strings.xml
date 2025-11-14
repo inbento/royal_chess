@@ -89,4 +89,9 @@
 
     <string name="open_with">Открыть с помощью</string>
 
+    <string name="king_man_ability">⚔️ Боевое вдохновение:</string>
+    <string name="king_dragon_ability">🔥 Дыхание дракона: может сжечь одну вражескую фигуру за игру</string>
+    <string name="king_elf_ability">🌿 Лесная магия:</string>
+    <string name="king_gnom_ability">⚒️ Подземные ходы: пешки могут двигаться назад</string>
+
 </resources>
