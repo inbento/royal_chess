@@ -20,6 +20,12 @@ public class ChessBoard {
     private boolean elfAbilityUsedBlack = false;
     private int elfAbilityTargetRow = -1;
     private int elfAbilityTargetCol = -1;
+    private boolean humanAbilityUsedWhite = false;
+    private boolean humanAbilityUsedBlack = false;
+    private int humanAbilityRemainingUsesWhite = 2;
+    private int humanAbilityRemainingUsesBlack = 2;
+    private boolean dragonFireShotUsedWhite = false;
+    private boolean dragonFireShotUsedBlack = false;
     private String activeKingAbility = null;
 
     public ChessBoard() {
@@ -96,7 +102,6 @@ public class ChessBoard {
                 ((Rook) selectedPiece).setMoved();
             }
         }
-
         isWhiteTurn = !isWhiteTurn;
         selectedPiece = null;
         possibleMoves.clear();
@@ -282,6 +287,10 @@ public class ChessBoard {
                 break;
             case "elf":
                 break;
+            case "human":
+                break;
+            case "dragon":
+                break;
         }
     }
 
@@ -323,6 +332,137 @@ public class ChessBoard {
         }
 
         return false;
+    }
+
+    public boolean activateHumanAbility(int enemyPawnRow, int enemyPawnCol) {
+        if (!"human".equals(activeKingAbility)) {
+            return false;
+        }
+
+        ChessPiece enemyPawn = getPiece(enemyPawnRow, enemyPawnCol);
+        if (enemyPawn == null ||
+                enemyPawn.getType() != ChessPiece.PieceType.PAWN ||
+                enemyPawn.isWhite() == isWhiteTurn ||
+                !isOnOurHalf(enemyPawnRow, isWhiteTurn)) {
+            return false;
+        }
+
+        if ((isWhiteTurn && (humanAbilityUsedWhite || humanAbilityRemainingUsesWhite <= 0)) ||
+                (!isWhiteTurn && (humanAbilityUsedBlack || humanAbilityRemainingUsesBlack <= 0))) {
+            return false;
+        }
+
+        board[enemyPawnRow][enemyPawnCol] = new Pawn(isWhiteTurn, enemyPawnRow, enemyPawnCol);
+
+        if (isWhiteTurn) {
+            humanAbilityRemainingUsesWhite--;
+            if (humanAbilityRemainingUsesWhite <= 0) {
+                humanAbilityUsedWhite = true;
+            }
+        } else {
+            humanAbilityRemainingUsesBlack--;
+            if (humanAbilityRemainingUsesBlack <= 0) {
+                humanAbilityUsedBlack = true;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isOnOurHalf(int row, boolean isWhite) {
+        return isWhite ? row >= 4 : row <= 3;
+    }
+
+    public boolean isHumanAbilityAvailable() {
+        if (!"human".equals(activeKingAbility)) {
+            return false;
+        }
+
+        if (isWhiteTurn && !humanAbilityUsedWhite && humanAbilityRemainingUsesWhite > 0) {
+            return true;
+        } else if (!isWhiteTurn && !humanAbilityUsedBlack && humanAbilityRemainingUsesBlack > 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public int getHumanAbilityRemainingUses() {
+        if (isWhiteTurn) {
+            return humanAbilityRemainingUsesWhite;
+        } else {
+            return humanAbilityRemainingUsesBlack;
+        }
+    }
+
+    public boolean activateDragonFireShot(int fromRow, int fromCol, int toRow, int toCol) {
+        if (!"dragon".equals(activeKingAbility)) {
+            return false;
+        }
+
+        if ((isWhiteTurn && dragonFireShotUsedWhite) || (!isWhiteTurn && dragonFireShotUsedBlack)) {
+            return false;
+        }
+
+        ChessPiece targetPiece = getPiece(toRow, toCol);
+        if (targetPiece != null && targetPiece.getType() == ChessPiece.PieceType.KING) {
+            return false;
+        }
+
+        ChessPiece shooter = getPiece(fromRow, fromCol);
+        if (shooter == null || shooter.getType() != ChessPiece.PieceType.PAWN) {
+            return false;
+        }
+
+        if (fromRow != toRow && fromCol != toCol) {
+            return false;
+        }
+
+        if (!isPathClearForFire(fromRow, fromCol, toRow, toCol)) {
+            return false;
+        }
+
+        board[toRow][toCol] = null;
+
+        if (isWhiteTurn) {
+            dragonFireShotUsedWhite = true;
+        } else {
+            dragonFireShotUsedBlack = true;
+        }
+
+        return true;
+    }
+
+    private boolean isPathClearForFire(int fromRow, int fromCol, int toRow, int toCol) {
+        int rowStep = Integer.compare(toRow, fromRow);
+        int colStep = Integer.compare(toCol, fromCol);
+
+        int currentRow = fromRow + rowStep;
+        int currentCol = fromCol + colStep;
+
+        while (currentRow != toRow || currentCol != toCol) {
+            if (getPiece(currentRow, currentCol) != null) {
+                return false;
+            }
+            currentRow += rowStep;
+            currentCol += colStep;
+        }
+        return true;
+    }
+
+    public boolean isDragonFireShotAvailable() {
+        if (!"dragon".equals(activeKingAbility)) {
+            return false;
+        }
+
+        boolean available;
+        if (isWhiteTurn) {
+            available = !dragonFireShotUsedWhite;
+        } else {
+            available = !dragonFireShotUsedBlack;
+        }
+
+        return available;
     }
 
 }

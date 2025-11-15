@@ -156,6 +156,15 @@ public class ChessGameActivity extends AppCompatActivity
             if ("elf".equals(playerKingType)) {
                 message += "\nНажмите на свою пешку чтобы превратить её в коня";
             }
+            else if ("human".equals(playerKingType)) {
+                message += "\nНажмите на вражескую пешку на вашей половине доски чтобы превратить её в свою";
+            }
+            else if ("dragon".equals(playerKingType)) {
+                message += "\nПешка может выстрелить огнем по горизонтали/вертикали";
+            }
+            else if ("gnom".equals(playerKingType)) {
+                message += "\nПешка могут двигаться и бить назад";
+            }
 
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
 
@@ -262,6 +271,34 @@ public class ChessGameActivity extends AppCompatActivity
                 Toast.makeText(this, "Пешка превращена в коня!", Toast.LENGTH_SHORT).show();
                 updateBoard();
                 return;
+            }
+        }
+
+        if (chessBoard.isHumanAbilityAvailable()) {
+            boolean success = chessBoard.activateHumanAbility(row, col);
+            if (success) {
+                int remaining = chessBoard.getHumanAbilityRemainingUses();
+                String message = "Пешка перешла на вашу сторону!" +
+                        (remaining > 0 ? "\nОсталось превращений: " + remaining : "");
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                updateBoard();
+                return;
+            }
+        }
+
+        if (chessBoard.isDragonFireShotAvailable() && chessBoard.getSelectedPiece() != null) {
+            ChessPiece selected = chessBoard.getSelectedPiece();
+            if (selected.getType() == ChessPiece.PieceType.PAWN) {
+                boolean success = chessBoard.activateDragonFireShot(
+                        selected.getRow(), selected.getCol(), row, col);
+                if (success) {
+                    Toast.makeText(this, "Огненный выстрел! Фигура сожжена!", Toast.LENGTH_SHORT).show();
+                    updateBoard();
+
+                    clearAllSelection();
+                    chessBoard.selectPiece(-1, -1);
+                    return;
+                }
             }
         }
 
@@ -498,4 +535,5 @@ public class ChessGameActivity extends AppCompatActivity
             chessTimer.stop();
         }
     }
+
 }
