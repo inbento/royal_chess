@@ -7,6 +7,7 @@ import android.widget.TextView;
 import androidx.appcompat.widget.AppCompatTextView;
 import android.view.ViewGroup;
 
+import com.example.rc.chess.ChessBoard;
 import com.example.rc.chess.ChessPiece;
 
 public class ChessSquare extends AppCompatTextView {
@@ -24,7 +25,6 @@ public class ChessSquare extends AppCompatTextView {
         setGravity(android.view.Gravity.CENTER);
         setText("");
 
-        // Устанавливаем базовый цвет клетки
         updateBaseColor();
     }
 
@@ -32,15 +32,13 @@ public class ChessSquare extends AppCompatTextView {
         this.piece = piece;
         if (piece != null) {
             setText(getPieceSymbol(piece));
-            // Делаем текст более контрастным для лучшей видимости на фоне
             setTextColor(piece.isWhite() ? Color.WHITE : Color.BLACK);
-            setShadowLayer(2, 1, 1, Color.GRAY); // Добавляем тень для лучшей читаемости
+            setShadowLayer(2, 1, 1, Color.GRAY);
         } else {
             setText("");
             setShadowLayer(0, 0, 0, Color.TRANSPARENT);
         }
 
-        // Обновляем фон с учетом выбора
         updateBackground();
     }
 
@@ -50,7 +48,6 @@ public class ChessSquare extends AppCompatTextView {
     }
 
     public void updateBaseColor() {
-        // Более насыщенные цвета для лучшей видимости на фоне
         if ((row + col) % 2 == 0) {
             setBackgroundColor(Color.parseColor("#E8D5B7")); // Более насыщенный светлый
         } else {
@@ -60,14 +57,12 @@ public class ChessSquare extends AppCompatTextView {
 
     private void updateBackground() {
         if (isSelected) {
-            // Зеленая обводка для выбранной клетки
             if ((row + col) % 2 == 0) {
                 setBackgroundResource(R.drawable.chess_square_light_selected);
             } else {
                 setBackgroundResource(R.drawable.chess_square_dark_selected);
             }
         } else {
-            // Обычный цвет без обводки
             updateBaseColor();
         }
     }

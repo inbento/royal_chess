@@ -148,11 +148,15 @@ public class ChessGameActivity extends AppCompatActivity
 
     private void activateKingAbility() {
         if (chessBoard != null) {
-            System.out.println("Activating king ability: " + playerKingType);
             chessBoard.activateKingAbility(playerKingType);
 
             String abilityName = getKingAbilityName(playerKingType);
             String message = "Активирована способность: " + abilityName;
+
+            if ("elf".equals(playerKingType)) {
+                message += "\nНажмите на свою пешку чтобы превратить её в коня";
+            }
+
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
 
             if (chessBoard.getSelectedPiece() != null) {
@@ -250,6 +254,15 @@ public class ChessGameActivity extends AppCompatActivity
     private void handleSquareClick(int row, int col) {
         if (promotionDialog != null && promotionDialog.getVisibility() == View.VISIBLE) {
             return;
+        }
+
+        if (chessBoard.isElfAbilityAvailable()) {
+            boolean success = chessBoard.activateElfAbility(row, col);
+            if (success) {
+                Toast.makeText(this, "Пешка превращена в коня!", Toast.LENGTH_SHORT).show();
+                updateBoard();
+                return;
+            }
         }
 
         ChessPiece piece = chessBoard.getPiece(row, col);
@@ -452,6 +465,9 @@ public class ChessGameActivity extends AppCompatActivity
             } else {
                 setupTimer();
             }
+        }
+        if (playerKingType != null) {
+            chessBoard.activateKingAbility(playerKingType);
         }
         setupChessBoard();
         updatePlayerTurn();

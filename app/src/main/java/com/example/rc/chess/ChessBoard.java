@@ -16,6 +16,10 @@ public class ChessBoard {
     private ChessPiece selectedPiece;
     private List<int[]> possibleMoves;
     private boolean gnomeAbilityActive = false;
+    private boolean elfAbilityUsedWhite = false;
+    private boolean elfAbilityUsedBlack = false;
+    private int elfAbilityTargetRow = -1;
+    private int elfAbilityTargetCol = -1;
     private String activeKingAbility = null;
 
     public ChessBoard() {
@@ -275,9 +279,50 @@ public class ChessBoard {
 
         switch (kingType) {
             case "gnome":
-                gnomeAbilityActive = true;
+                break;
+            case "elf":
                 break;
         }
+    }
+
+    public boolean activateElfAbility(int pawnRow, int pawnCol) {
+        if (!"elf".equals(activeKingAbility)) {
+            return false;
+        }
+
+        ChessPiece pawn = getPiece(pawnRow, pawnCol);
+        if (pawn == null || pawn.getType() != ChessPiece.PieceType.PAWN) {
+            return false;
+        }
+
+        if ((pawn.isWhite() && elfAbilityUsedWhite) ||
+                (!pawn.isWhite() && elfAbilityUsedBlack)) {
+            return false;
+        }
+
+        board[pawnRow][pawnCol] = new Knight(pawn.isWhite(), pawnRow, pawnCol);
+
+        if (pawn.isWhite()) {
+            elfAbilityUsedWhite = true;
+        } else {
+            elfAbilityUsedBlack = true;
+        }
+
+        return true;
+    }
+
+    public boolean isElfAbilityAvailable() {
+        if (!"elf".equals(activeKingAbility)) {
+            return false;
+        }
+
+        if (isWhiteTurn && !elfAbilityUsedWhite) {
+            return true;
+        } else if (!isWhiteTurn && !elfAbilityUsedBlack) {
+            return true;
+        }
+
+        return false;
     }
 
 }
