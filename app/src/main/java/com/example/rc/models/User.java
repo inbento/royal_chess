@@ -6,6 +6,9 @@ public class User {
     private String email;
     private String password;
     private String createdAt;
+    private boolean isOnline;
+    private String sessionId;
+    private long lastSeen;
 
     public User() {}
 

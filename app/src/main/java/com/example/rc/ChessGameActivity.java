@@ -5,12 +5,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.GridLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -52,6 +54,9 @@ public class ChessGameActivity extends AppCompatActivity
     private long gameTimeSeconds = 600;
     private long gameStartTime;
 
+    private ImageView ivPlayerKing;
+    private String playerKingType;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,6 +84,8 @@ public class ChessGameActivity extends AppCompatActivity
 
         setupAdapters();
         updatePlayerTurn();
+        loadSelectedKing();
+        initKingView();
     }
 
     private void initViews() {
@@ -104,6 +111,67 @@ public class ChessGameActivity extends AppCompatActivity
         tvBlackTimer = findViewById(R.id.tvBlackTimer);
         indicatorWhite = findViewById(R.id.indicatorWhite);
         indicatorBlack = findViewById(R.id.indicatorBlack);
+    }
+
+    private void loadSelectedKing() {
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        int userId = prefs.getInt("currentUserId", -1);
+
+        if (userId != -1) {
+            playerKingType = dbHelper.getSelectedKing(userId);
+        } else {
+            playerKingType = "human";
+        }
+    }
+
+    private void initKingView() {
+        ivPlayerKing = findViewById(R.id.ivPlayerKing);
+
+        int kingDrawableId = getKingDrawableId(playerKingType);
+        ivPlayerKing.setImageResource(kingDrawableId);
+
+        ivPlayerKing.setOnClickListener(v -> {
+            activateKingAbility();
+        });
+    }
+
+    private int getKingDrawableId(String kingType) {
+        switch (kingType) {
+            case "human": return R.drawable.king_of_man_bg;
+            case "dragon": return R.drawable.king_of_dragon_bg;
+            case "elf": return R.drawable.king_of_elf_bg;
+            case "gnome": return R.drawable.king_of_gnom_bg;
+            default: return R.drawable.king_of_man_bg;
+        }
+    }
+
+    private void activateKingAbility() {
+        if (chessBoard != null) {
+            System.out.println("Activating king ability: " + playerKingType);
+            chessBoard.activateKingAbility(playerKingType);
+
+            String abilityName = getKingAbilityName(playerKingType);
+            String message = "Активирована способность: " + abilityName;
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+
+            if (chessBoard.getSelectedPiece() != null) {
+                chessBoard.selectPiece(chessBoard.getSelectedPiece().getRow(),
+                        chessBoard.getSelectedPiece().getCol());
+                updateBoard();
+                highlightPossibleMoves();
+            }
+        }
+    }
+
+    private String getKingAbilityName(String kingType) {
+        switch (kingType) {
+            case "human": return "Боевое вдохновение";
+            case "dragon": return "Дыхание дракона";
+            case "elf": return "Лесная магия";
+            case "gnome": return "Подземные ходы";
+            default: return "Неизвестная способность";
+        }
     }
 
     private void setupTimer() {

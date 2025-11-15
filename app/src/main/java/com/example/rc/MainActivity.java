@@ -230,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startGame() {
-        Intent intent = new Intent(MainActivity.this, ColorSelectionActivity.class);
+        Intent intent = new Intent(MainActivity.this, GameModeSelectionActivity.class);
         startActivity(intent);
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }

@@ -50,6 +50,13 @@
                 android:textStyle="bold"
                 android:gravity="center" />
 
+            <ImageView
+                android:id="@+id/ivPlayerKing"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_margin="8dp"
+                android:src="@drawable/king_of_man_bg" />
+
             <View
                 android:layout_width="4dp"
                 android:layout_height="30dp"

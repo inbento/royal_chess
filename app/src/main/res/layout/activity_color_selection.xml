@@ -18,7 +18,6 @@
         android:layout_marginBottom="40dp"
         android:textColor="@android:color/black" />
 
-    <!-- Кнопка выбора времени -->
     <Button
         android:id="@+id/btnTimeSettings"
         android:layout_width="match_parent"

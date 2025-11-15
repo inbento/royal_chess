@@ -15,6 +15,8 @@ public class ChessBoard {
     private boolean isWhiteTurn;
     private ChessPiece selectedPiece;
     private List<int[]> possibleMoves;
+    private boolean gnomeAbilityActive = false;
+    private String activeKingAbility = null;
 
     public ChessBoard() {
         board = new ChessPiece[8][8];
@@ -255,6 +257,27 @@ public class ChessBoard {
     }
 
     public ChessPiece getSelectedPiece() { return selectedPiece; }
-    public List<int[]> getPossibleMoves() { return possibleMoves; }
+    public List<int[]> getPossibleMoves() {
+        return possibleMoves;
+    }
     public boolean isWhiteTurn() { return isWhiteTurn; }
+
+    public boolean isGnomeAbilityActive() {
+        return gnomeAbilityActive;
+    }
+
+    public String getActiveKingAbility() {
+        return activeKingAbility;
+    }
+
+    public void activateKingAbility(String kingType) {
+        this.activeKingAbility = kingType;
+
+        switch (kingType) {
+            case "gnome":
+                gnomeAbilityActive = true;
+                break;
+        }
+    }
+
 }

@@ -15,12 +15,13 @@ import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "ChessApp.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 4;
 
     private static final String TABLE_USERS = "users";
     private static final String COLUMN_USER_ID = "id";
     private static final String COLUMN_USERNAME = "username";
     private static final String COLUMN_CREATED_AT = "created_at";
+    private static final String COLUMN_SELECTED_KING = "selected_king";
 
     private static final String TABLE_STATS = "game_stats";
     private static final String COLUMN_STAT_ID = "id";
@@ -44,6 +45,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + COLUMN_USERNAME + " TEXT UNIQUE,"
                 + COLUMN_EMAIL + " TEXT UNIQUE,"
                 + COLUMN_PASSWORD + " TEXT,"
+                + COLUMN_SELECTED_KING + " TEXT DEFAULT 'human'," // ТЕПЕРЬ ТОЧНО ДОБАВИМ
                 + COLUMN_CREATED_AT + " TEXT"
                 + ")";
         db.execSQL(createUsersTable);
@@ -60,25 +62,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + ")";
         db.execSQL(createStatsTable);
 
+        // Добавляем тестового пользователя
         ContentValues values = new ContentValues();
         values.put(COLUMN_USERNAME, "Игрок");
         values.put(COLUMN_EMAIL, "player@example.com");
         values.put(COLUMN_PASSWORD, "123456");
+        values.put(COLUMN_SELECTED_KING, "human");
         values.put(COLUMN_CREATED_AT, String.valueOf(System.currentTimeMillis()));
         db.insert(TABLE_USERS, null, values);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion < 2) {
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_EMAIL + " TEXT DEFAULT 'player@example.com'");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_PASSWORD + " TEXT DEFAULT '123456'");
-
-            ContentValues values = new ContentValues();
-            values.put(COLUMN_EMAIL, "player@example.com");
-            values.put(COLUMN_PASSWORD, "123456");
-            db.update(TABLE_USERS, values, null, null);
-        }
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_STATS);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+        onCreate(db);
     }
 
     public long addUser(User user) {
@@ -249,4 +247,33 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cursor.close();
         return exists;
     }
+
+    public boolean updateSelectedKing(int userId, String kingType) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_SELECTED_KING, kingType);
+
+        Log.d("DatabaseHelper", "Updating king for user " + userId + " to: " + kingType);
+
+        int rowsAffected = db.update(TABLE_USERS, values, COLUMN_USER_ID + " = ?",
+                new String[]{String.valueOf(userId)});
+
+        Log.d("DatabaseHelper", "Rows affected: " + rowsAffected);
+
+        return rowsAffected > 0;
+    }
+
+    public String getSelectedKing(int userId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(TABLE_USERS, new String[]{COLUMN_SELECTED_KING},
+                COLUMN_USER_ID + " = ?", new String[]{String.valueOf(userId)},
+                null, null, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            String king = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SELECTED_KING));
+            cursor.close();
+            return king;
+        }
+        return "human";
+    }
+
 }

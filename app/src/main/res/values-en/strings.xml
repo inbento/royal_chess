@@ -10,30 +10,6 @@
     <string name="english">English</string>
 
     <string name="statistics_title">Statistics</string>
-    <string name="general_statistics">GENERAL STATISTICS</string>
-    <string name="wins_by_color">WINS BY COLOR</string>
-    <string name="white_wins_stat">White: 12 wins</string>
-    <string name="black_wins_stat">Black: 8 wins</string>
-    <string name="kings_statistics">KINGS STATISTICS</string>
-    <string name="human_king">Human King: 7 games</string>
-    <string name="dragon_king">Dragon King: 5 games</string>
-    <string name="elf_king">Elf King: 3 games</string>
-    <string name="gnom_king">Dwarven King: 5 games</string>
-    <string name="captured_pieces">CAPTURED PIECES</string>
-    <string name="total_pieces">Total: 147 pieces</string>
-    <string name="pawns">Pawns: 89</string>
-    <string name="rooks">Rooks: 18</string>
-    <string name="knights">Knights: 15</string>
-    <string name="bishops">Bishops: 12</string>
-    <string name="queens">Queens: 10</string>
-    <string name="game_time">GAME TIME</string>
-    <string name="total_time">Total time: 45h 32m</string>
-    <string name="avg_game">Average game: 25m</string>
-    <string name="max_session">Max session: 3h 15m</string>
-    <string name="additional">ADDITIONAL</string>
-    <string name="total_games">Total games: 20</string>
-    <string name="draws">Draws: 0</string>
-    <string name="best_streak">Best streak: 5 wins</string>
 
     <string name="choose_color">Choose your pieces color</string>
     <string name="white_pieces">White</string>
@@ -91,5 +67,29 @@
     <string name="king_dragon_ability">🔥 Dragon Breath: can burn one enemy piece per game</string>
     <string name="king_elf_ability">🌿 Forest Magic:</string>
     <string name="king_gnom_ability">⚒️ Underground Moves: pawns can move backwards</string>
+
+    <string name="additional">Additional</string>
+    <string name="avg_game">Average Game</string>
+    <string name="best_streak">Best Streak</string>
+    <string name="bishops">Bishops</string>
+    <string name="black_wins_stat">Black Wins</string>
+    <string name="captured_pieces">Captured Pieces</string>
+    <string name="dragon_king">Dragon King</string>
+    <string name="draws">Draws</string>
+    <string name="elf_king">Elf King</string>
+    <string name="game_time">Game Time</string>
+    <string name="general_statistics">General Statistics</string>
+    <string name="gnom_king">Gnom King</string>
+    <string name="human_king">Human King</string>
+    <string name="kings_statistics">Kings Statistics</string>
+    <string name="knights">Knights</string>
+    <string name="max_session">Max Session</string>
+    <string name="pawns">Pawns</string>
+    <string name="queens">Queens</string>
+    <string name="rooks">Rooks</string>
+    <string name="total_pieces">Total Pieces</string>
+    <string name="total_time">Total Time</string>
+    <string name="white_wins_stat">White Wins</string>
+    <string name="wins_by_color">Wins by Color</string>
 
 </resources>
