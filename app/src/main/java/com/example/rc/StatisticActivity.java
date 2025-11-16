@@ -30,7 +30,9 @@ public class StatisticActivity extends AppCompatActivity {
         setContentView(R.layout.activity_statistic_container);
 
         dbHelper = new DatabaseHelper(this);
-        currentUser = dbHelper.getCurrentUser();
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        int userId = prefs.getInt("currentUserId", -1);
+        currentUser = dbHelper.getUser(userId);
 
         initViews();
         setupUserData();

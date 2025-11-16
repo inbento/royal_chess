@@ -18,15 +18,12 @@ public class OnlineGameManager {
         void onError(String error);
     }
 
-    public void findMatch(User user, String color, int timeMinutes, King king, MatchmakingListener listener) {
-        // TODO: Реализовать логику поиска матча через выбранный сервер
-        // 1. Отправляем запрос на сервер с параметрами
-        // 2. Сервер ищет подходящего соперника
-        // 3. При нахождении создает GameSession
-        // 4. Возвращает session обоим игрокам
+    public void findMatch(User user, String matchId, String color, int timeMinutes, King king, MatchmakingListener listener) {
+
     }
 
+
     public void cancelMatchmaking(User user) {
-        // TODO: Отменить поиск если пользователь вышел
+
     }
 }

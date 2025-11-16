@@ -83,8 +83,6 @@ public class MainActivity extends AppCompatActivity {
         int userId = getCurrentUserId();
         if (userId != -1) {
             currentUser = dbHelper.getUser(userId);
-        } else {
-            currentUser = dbHelper.getCurrentUser();
         }
     }
     private void initViews() {

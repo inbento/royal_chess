@@ -475,7 +475,9 @@ public class ChessGameActivity extends AppCompatActivity
     private void saveGameResult(boolean isWhiteWinner, int durationSeconds) {
 
         DatabaseHelper dbHelper = new DatabaseHelper(this);
-        User currentUser = dbHelper.getCurrentUser();
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        int userId = prefs.getInt("currentUserId", -1);
+        User currentUser = dbHelper.getUser(userId);
 
         if (currentUser != null) {
             GameStat stat = new GameStat(

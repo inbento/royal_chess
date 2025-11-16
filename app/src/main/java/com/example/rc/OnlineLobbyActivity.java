@@ -1,6 +1,7 @@
 package com.example.rc;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -22,6 +23,7 @@ import com.example.rc.models.GameSession;
 import com.example.rc.OnlineGameManager.MatchmakingListener;
 
 import java.util.Arrays;
+import java.util.Random;
 
 public class OnlineLobbyActivity extends AppCompatActivity {
 
@@ -41,7 +43,9 @@ public class OnlineLobbyActivity extends AppCompatActivity {
         setContentView(R.layout.activity_online_lobby);
 
         dbHelper = new DatabaseHelper(this);
-        currentUser = dbHelper.getCurrentUser();
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        int userId = prefs.getInt("currentUserId", -1);
+        currentUser = dbHelper.getUser(userId);
         gameManager = OnlineGameManager.getInstance();
 
         initViews();
@@ -102,12 +106,14 @@ public class OnlineLobbyActivity extends AppCompatActivity {
         int timeMinutes = getSelectedTime();
         King selectedKing = (King) spinnerKing.getSelectedItem();
 
+        String matchmakingId = generateMatchmakingId(currentUser);
+
         btnFindMatch.setEnabled(false);
         tvSearchStatus.setVisibility(View.VISIBLE);
         progressSearch.setVisibility(View.VISIBLE);
         tvSearchStatus.setText("🔍 Поиск противника...");
 
-        gameManager.findMatch(currentUser, color, timeMinutes, selectedKing,
+        gameManager.findMatch(currentUser, matchmakingId, color, timeMinutes, selectedKing,
                 new MatchmakingListener() {
                     @Override
                     public void onMatchFound(GameSession session) {
@@ -134,6 +140,11 @@ public class OnlineLobbyActivity extends AppCompatActivity {
                         });
                     }
                 });
+    }
+
+    private String generateMatchmakingId(User user) {
+        String onlineId = dbHelper.getUserOnlineId(user.getId());
+        return "match_" + onlineId + "_" + System.currentTimeMillis() + "_" + new Random().nextInt(1000);
     }
 
     private String getSelectedColor() {

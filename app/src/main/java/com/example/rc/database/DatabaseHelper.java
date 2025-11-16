@@ -9,17 +9,23 @@ import android.util.Log;
 
 import com.example.rc.models.GameStat;
 import com.example.rc.models.User;
+import com.example.rc.utils.PasswordHasher;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "ChessApp.db";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 6;
 
     private static final String TABLE_USERS = "users";
     private static final String COLUMN_USER_ID = "id";
+    private static final String COLUMN_ONLINE_ID = "online_id";
     private static final String COLUMN_USERNAME = "username";
+    private static final String COLUMN_EMAIL = "email";
+    private static final String COLUMN_PASSWORD = "password";
+    private static final String COLUMN_SALT = "salt";
     private static final String COLUMN_CREATED_AT = "created_at";
     private static final String COLUMN_SELECTED_KING = "selected_king";
 
@@ -31,8 +37,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_DURATION = "duration";
     private static final String COLUMN_DATE = "date";
     private static final String COLUMN_MOVES_COUNT = "moves_count";
-    private static final String COLUMN_EMAIL = "email";
-    private static final String COLUMN_PASSWORD = "password";
+
+
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -42,10 +48,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         String createUsersTable = "CREATE TABLE " + TABLE_USERS + "("
                 + COLUMN_USER_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + COLUMN_ONLINE_ID + " TEXT UNIQUE,"
                 + COLUMN_USERNAME + " TEXT UNIQUE,"
                 + COLUMN_EMAIL + " TEXT UNIQUE,"
                 + COLUMN_PASSWORD + " TEXT,"
-                + COLUMN_SELECTED_KING + " TEXT DEFAULT 'human'," // ТЕПЕРЬ ТОЧНО ДОБАВИМ
+                + COLUMN_SALT + " TEXT,"
+                + COLUMN_SELECTED_KING + " TEXT DEFAULT 'human',"
                 + COLUMN_CREATED_AT + " TEXT"
                 + ")";
         db.execSQL(createUsersTable);
@@ -61,15 +69,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + "FOREIGN KEY(" + COLUMN_USER_ID_FK + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + ")"
                 + ")";
         db.execSQL(createStatsTable);
-
-        // Добавляем тестового пользователя
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_USERNAME, "Игрок");
-        values.put(COLUMN_EMAIL, "player@example.com");
-        values.put(COLUMN_PASSWORD, "123456");
-        values.put(COLUMN_SELECTED_KING, "human");
-        values.put(COLUMN_CREATED_AT, String.valueOf(System.currentTimeMillis()));
-        db.insert(TABLE_USERS, null, values);
     }
 
     @Override
@@ -79,15 +78,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    public String generateUniqueOnlineId() {
+        return "user_" + System.currentTimeMillis() + "_" + new Random().nextInt(10000);
+    }
+
     public long addUser(User user) {
         SQLiteDatabase db = this.getWritableDatabase();
+        String salt = PasswordHasher.generateSalt();
+        String hashedPassword = PasswordHasher.hashPassword(user.getPassword(), salt);
         ContentValues values = new ContentValues();
         values.put(COLUMN_USERNAME, user.getUsername());
+        values.put(COLUMN_ONLINE_ID, generateUniqueOnlineId());
         values.put(COLUMN_EMAIL, user.getEmail());
-        values.put(COLUMN_PASSWORD, user.getPassword());
+        values.put(COLUMN_PASSWORD, hashedPassword);
+        values.put(COLUMN_SALT, salt);
         values.put(COLUMN_CREATED_AT, user.getCreatedAt());
 
         return db.insertWithOnConflict(TABLE_USERS, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    public String getUserOnlineId(int userId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(TABLE_USERS, new String[]{COLUMN_ONLINE_ID},
+                COLUMN_USER_ID + " = ?", new String[]{String.valueOf(userId)},
+                null, null, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            String onlineId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ONLINE_ID));
+            cursor.close();
+            return onlineId;
+        }
+        return null;
     }
 
     public User getUser(int userId) {
@@ -118,7 +138,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             user.setId(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_USER_ID)));
             user.setUsername(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME)));
             user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)));
-            user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD)));
+            user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD))); // это теперь хеш
             user.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CREATED_AT)));
             cursor.close();
             return user;
@@ -128,8 +148,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public User authenticateUser(String email, String password) {
         User user = getUserByEmail(email);
-        if (user != null && user.getPassword().equals(password)) {
-            return user;
+        if (user != null) {
+            String salt = getUserSalt(user.getId());
+            if (PasswordHasher.verifyPassword(password, salt, user.getPassword())) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    private String getUserSalt(int userId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(TABLE_USERS, new String[]{COLUMN_SALT},
+                COLUMN_USER_ID + " = ?", new String[]{String.valueOf(userId)},
+                null, null, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            String salt = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SALT));
+            cursor.close();
+            return salt;
         }
         return null;
     }
@@ -148,22 +184,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
         values.put(COLUMN_USERNAME, username);
         values.put(COLUMN_EMAIL, email);
+
         if (password != null && !password.isEmpty()) {
-            values.put(COLUMN_PASSWORD, password);
+            String newSalt = PasswordHasher.generateSalt();
+            String hashedPassword = PasswordHasher.hashPassword(password, newSalt);
+            values.put(COLUMN_PASSWORD, hashedPassword);
+            values.put(COLUMN_SALT, newSalt);
         }
+
         int rowsAffected = db.update(TABLE_USERS, values, COLUMN_USER_ID + " = ?",
                 new String[]{String.valueOf(userId)});
         return rowsAffected > 0;
     }
 
-    public User getCurrentUser() {
+    public User getCurrentUser(int userId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_USERS, null, null, null, null, null, COLUMN_USER_ID + " ASC", "1");
+        Cursor cursor = db.query(TABLE_USERS, null, COLUMN_USER_ID + " = ?",
+                new String[]{String.valueOf(userId)}, null, null, null);
 
         if (cursor != null && cursor.moveToFirst()) {
             User user = new User();
             user.setId(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_USER_ID)));
             user.setUsername(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME)));
+            user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)));
+            user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD)));
             user.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CREATED_AT)));
             cursor.close();
             return user;

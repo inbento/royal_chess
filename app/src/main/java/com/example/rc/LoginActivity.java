@@ -131,23 +131,20 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // Проверяем, не занят ли email
         if (dbHelper.isEmailExists(email)) {
             etRegisterEmail.setError("Этот email уже зарегистрирован");
             return;
         }
 
-        // Проверяем, не занято ли имя пользователя
         if (dbHelper.isUsernameExists(username)) {
             etRegisterUsername.setError("Это имя пользователя уже занято");
             return;
         }
 
-        // Получаем текущего пользователя (если есть)
-        User existingUser = dbHelper.getCurrentUser();
+        int currentUserId = getCurrentUserId();
 
-        if (existingUser != null) {
-            boolean success = dbHelper.updateUserProfile(existingUser.getId(), username, email, password);
+        if (currentUserId != -1) {
+            boolean success = dbHelper.updateUserProfile(currentUserId, username, email, password);
             if (success) {
                 User updatedUser = dbHelper.getUserByEmail(email);
                 if (updatedUser != null) {
