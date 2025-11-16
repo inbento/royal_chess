@@ -27,6 +27,8 @@ public class ChessBoard {
     private boolean dragonFireShotUsedWhite = false;
     private boolean dragonFireShotUsedBlack = false;
     private String activeKingAbility = null;
+    private String playerKingAbility = null;
+    private String opponentKingAbility = null;
 
     public ChessBoard() {
         board = new ChessPiece[8][8];
@@ -276,14 +278,19 @@ public class ChessBoard {
     }
 
     public String getActiveKingAbility() {
-        return activeKingAbility;
+        return isWhiteTurn ? playerKingAbility : opponentKingAbility;
     }
 
     public void activateKingAbility(String kingType) {
-        this.activeKingAbility = kingType;
+        if (isWhiteTurn) {
+            this.playerKingAbility = kingType;
+        } else {
+            this.opponentKingAbility = kingType;
+        }
 
         switch (kingType) {
             case "gnome":
+                gnomeAbilityActive = true;
                 break;
             case "elf":
                 break;
@@ -321,7 +328,7 @@ public class ChessBoard {
     }
 
     public boolean isElfAbilityAvailable() {
-        if (!"elf".equals(activeKingAbility)) {
+        if (!"elf".equals(getActiveKingAbility())) {
             return false;
         }
 
@@ -374,7 +381,7 @@ public class ChessBoard {
     }
 
     public boolean isHumanAbilityAvailable() {
-        if (!"human".equals(activeKingAbility)) {
+        if (!"human".equals(getActiveKingAbility())) {
             return false;
         }
 
@@ -451,7 +458,7 @@ public class ChessBoard {
     }
 
     public boolean isDragonFireShotAvailable() {
-        if (!"dragon".equals(activeKingAbility)) {
+        if (!"dragon".equals(getActiveKingAbility())) {
             return false;
         }
 

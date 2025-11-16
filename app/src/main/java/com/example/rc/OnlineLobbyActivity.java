@@ -105,6 +105,9 @@ public class OnlineLobbyActivity extends AppCompatActivity {
         String color = getSelectedColor();
         int timeMinutes = getSelectedTime();
         King selectedKing = (King) spinnerKing.getSelectedItem();
+        String kingType = getKingTypeFromName(selectedKing.getName());
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        prefs.edit().putString("selected_king_type", kingType).apply();
 
         String matchmakingId = generateMatchmakingId(currentUser);
 
@@ -143,8 +146,18 @@ public class OnlineLobbyActivity extends AppCompatActivity {
     }
 
     private String generateMatchmakingId(User user) {
-        String onlineId = dbHelper.getUserOnlineId(user.getId());
+        String onlineId = user.getOnlineId();
         return "match_" + onlineId + "_" + System.currentTimeMillis() + "_" + new Random().nextInt(1000);
+    }
+
+    private String getKingTypeFromName(String kingName) {
+        switch (kingName) {
+            case "Король людей": return "human";
+            case "Король драконов": return "dragon";
+            case "Король эльфов": return "elf";
+            case "Король гномов": return "gnome";
+            default: return "human";
+        }
     }
 
     private String getSelectedColor() {

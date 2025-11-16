@@ -54,8 +54,12 @@ public class ChessGameActivity extends AppCompatActivity
     private long gameTimeSeconds = 600;
     private long gameStartTime;
 
-    private ImageView ivPlayerKing;
-    private String playerKingType;
+    private ImageView ivPlayerKing, ivOpponentKing;
+    private String playerKingType, opponentKingType;
+
+    private boolean isOnlineGame = false;
+    private String opponentUsername = "Оппонент";
+    private TextView tvPlayerName, tvOpponentName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +71,12 @@ public class ChessGameActivity extends AppCompatActivity
             isPlayerWhite = extras.getBoolean("player_color_white", true);
             gameTimeSeconds = extras.getInt("game_time_seconds", 600);
             isTimedGame = extras.getBoolean("is_timed_game", true);
+            isOnlineGame = extras.getBoolean("is_online_game", false);
+
+            if (isOnlineGame) {
+                opponentUsername = extras.getString("opponent_username", "Оппонент");
+                opponentKingType = extras.getString("opponent_king_type", "human");
+            }
         }
 
         gameStartTime = System.currentTimeMillis();
@@ -74,6 +84,12 @@ public class ChessGameActivity extends AppCompatActivity
 
         initViews();
         setupChessBoard();
+
+        if (isOnlineGame) {
+            setupOnlineUI();
+        } else {
+            setupOfflineUI();
+        }
 
         if (isTimedGame) {
             setupTimer();
@@ -111,6 +127,41 @@ public class ChessGameActivity extends AppCompatActivity
         tvBlackTimer = findViewById(R.id.tvBlackTimer);
         indicatorWhite = findViewById(R.id.indicatorWhite);
         indicatorBlack = findViewById(R.id.indicatorBlack);
+        tvPlayerName = findViewById(R.id.tvPlayerName);
+        tvOpponentName = findViewById(R.id.tvOpponentName);
+        ivPlayerKing = findViewById(R.id.ivPlayerKing);
+        ivOpponentKing = findViewById(R.id.ivOpponentKing);
+    }
+
+    private void setupOnlineUI() {
+
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        int userId = prefs.getInt("currentUserId", -1);
+        User currentUser = dbHelper.getUser(userId);
+
+        String playerName = currentUser != null ? currentUser.getUsername() : "Игрок";
+
+        if (isPlayerWhite) {
+            tvPlayerName.setText(playerName + " (Белые)");
+            tvOpponentName.setText(opponentUsername + " (Черные)");
+        } else {
+            tvPlayerName.setText(playerName + " (Черные)");
+            tvOpponentName.setText(opponentUsername + " (Белые)");
+        }
+
+        tvPlayerName.setVisibility(View.VISIBLE);
+        tvOpponentName.setVisibility(View.VISIBLE);
+
+        setupKingsForOnline();
+    }
+
+    private void setupOfflineUI() {
+        tvPlayerName.setVisibility(View.GONE);
+        tvOpponentName.setVisibility(View.GONE);
+
+        loadSelectedKing();
+        initKingView();
     }
 
     private void loadSelectedKing() {
@@ -122,6 +173,19 @@ public class ChessGameActivity extends AppCompatActivity
             playerKingType = dbHelper.getSelectedKing(userId);
         } else {
             playerKingType = "human";
+        }
+    }
+
+    private void setupKingsForOnline() {
+        loadSelectedKing();
+        int playerKingDrawable = getKingDrawableId(playerKingType);
+        ivPlayerKing.setImageResource(playerKingDrawable);
+
+        int opponentKingDrawable = getKingDrawableId(opponentKingType);
+        ivOpponentKing.setImageResource(opponentKingDrawable);
+
+        if (chessBoard != null) {
+            chessBoard.activateKingAbility(playerKingType);
         }
     }
 
