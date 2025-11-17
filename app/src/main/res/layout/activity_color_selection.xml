@@ -11,7 +11,7 @@
         android:id="@+id/tvTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Выберите цвет фигур"
+        android:text="Настройки оффлайн игры"
         android:textSize="24sp"
         android:textStyle="bold"
         android:gravity="center"
@@ -33,35 +33,90 @@
         android:orientation="horizontal"
         android:layout_marginBottom="20dp">
 
-        <Button
-            android:id="@+id/btnWhite"
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="120dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Белые"
-            android:textSize="16sp"
-            android:layout_marginEnd="10dp"
-            android:backgroundTint="#FFFFFFFF"
-            android:textColor="@android:color/black" />
+            android:orientation="vertical"
+            android:background="#FFFFFFFF"
+            android:padding="16dp"
+            android:layout_marginEnd="8dp">
 
-        <Button
-            android:id="@+id/btnBlack"
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Игрок 1 (Белые)"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Король для белых:"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp" />
+
+            <Spinner
+                android:id="@+id/spinnerWhiteKing"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/edit_text_bg" />
+
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="120dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Черные"
-            android:textSize="16sp"
-            android:layout_marginStart="10dp"
-            android:backgroundTint="#FF000000"
-            android:textColor="@android:color/white" />
+            android:orientation="vertical"
+            android:background="#FF000000"
+            android:padding="16dp"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Игрок 2 (Черные)"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Король для черных:"
+                android:textSize="14sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="8dp" />
+
+            <Spinner
+                android:id="@+id/spinnerBlackKing"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/edit_text_bg" />
+
+        </LinearLayout>
 
     </LinearLayout>
+
+    <Button
+        android:id="@+id/btnStartGame"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="🎮 Начать игру"
+        android:textSize="18sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#FF10B981"
+        android:layout_marginBottom="20dp" />
 
     <Button
         android:id="@+id/btnBack"
         android:layout_width="60dp"
         android:layout_height="60dp"
-        android:layout_margin="16dp"
         android:layout_gravity="start|top"
         android:backgroundTint="#f70f72"
         android:text="←"

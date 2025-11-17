@@ -17,7 +17,7 @@ import java.util.Random;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "ChessApp.db";
-    private static final int DATABASE_VERSION = 6;
+    private static final int DATABASE_VERSION = 7;
 
     private static final String TABLE_USERS = "users";
     private static final String COLUMN_USER_ID = "id";
@@ -27,7 +27,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_PASSWORD = "password";
     private static final String COLUMN_SALT = "salt";
     private static final String COLUMN_CREATED_AT = "created_at";
-    private static final String COLUMN_SELECTED_KING = "selected_king";
+
 
     private static final String TABLE_STATS = "game_stats";
     private static final String COLUMN_STAT_ID = "id";
@@ -53,7 +53,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + COLUMN_EMAIL + " TEXT UNIQUE,"
                 + COLUMN_PASSWORD + " TEXT,"
                 + COLUMN_SALT + " TEXT,"
-                + COLUMN_SELECTED_KING + " TEXT DEFAULT 'human',"
                 + COLUMN_CREATED_AT + " TEXT"
                 + ")";
         db.execSQL(createUsersTable);
@@ -290,34 +289,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         boolean exists = (cursor.getCount() > 0);
         cursor.close();
         return exists;
-    }
-
-    public boolean updateSelectedKing(int userId, String kingType) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_SELECTED_KING, kingType);
-
-        Log.d("DatabaseHelper", "Updating king for user " + userId + " to: " + kingType);
-
-        int rowsAffected = db.update(TABLE_USERS, values, COLUMN_USER_ID + " = ?",
-                new String[]{String.valueOf(userId)});
-
-        Log.d("DatabaseHelper", "Rows affected: " + rowsAffected);
-
-        return rowsAffected > 0;
-    }
-
-    public String getSelectedKing(int userId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_USERS, new String[]{COLUMN_SELECTED_KING},
-                COLUMN_USER_ID + " = ?", new String[]{String.valueOf(userId)},
-                null, null, null);
-        if (cursor != null && cursor.moveToFirst()) {
-            String king = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SELECTED_KING));
-            cursor.close();
-            return king;
-        }
-        return "human";
     }
 
 }

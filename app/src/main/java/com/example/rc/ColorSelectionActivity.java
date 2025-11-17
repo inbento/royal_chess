@@ -9,9 +9,17 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 
+import com.example.rc.models.King;
+
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 public class ColorSelectionActivity extends AppCompatActivity {
@@ -20,6 +28,10 @@ public class ColorSelectionActivity extends AppCompatActivity {
     private static final int REQUEST_TIME_SELECTION = 1;
     private int selectedTimeMinutes = 10;
 
+    private Spinner spinnerWhiteKing, spinnerBlackKing;
+    private String selectedWhiteKingType = "human";
+    private String selectedBlackKingType = "human";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,38 +39,66 @@ public class ColorSelectionActivity extends AppCompatActivity {
         Log.d(TAG, "onCreate started");
 
         initViews();
+        setupKingSpinners();
         updateTimeDisplay();
         Log.d(TAG, "ColorSelectionActivity setup completed");
     }
 
     private void initViews() {
         Button btnBack = findViewById(R.id.btnBack);
-        Button btnWhite = findViewById(R.id.btnWhite);
-        Button btnBlack = findViewById(R.id.btnBlack);
+        Button btnStartGame = findViewById(R.id.btnStartGame);
         Button btnTimeSettings = findViewById(R.id.btnTimeSettings);
 
-        // Кнопка назад - возврат в MainActivity
+        spinnerWhiteKing = findViewById(R.id.spinnerWhiteKing);
+        spinnerBlackKing = findViewById(R.id.spinnerBlackKing);
+
         btnBack.setOnClickListener(v -> {
             Log.d(TAG, "Back to MainActivity");
             finish();
         });
 
-        // Кнопка настроек времени
         btnTimeSettings.setOnClickListener(v -> {
             Log.d(TAG, "Opening TimeSelection");
             openTimeSelection();
         });
 
-        // Кнопки выбора цвета
-        btnWhite.setOnClickListener(v -> {
-            Log.d(TAG, "White color selected, starting game");
-            startGame(true);
+        btnStartGame.setOnClickListener(v -> {
+            Log.d(TAG, "Starting offline game");
+            startOfflineGame();
         });
+    }
 
-        btnBlack.setOnClickListener(v -> {
-            Log.d(TAG, "Black color selected, starting game");
-            startGame(false);
-        });
+    private void setupKingSpinners() {
+        List<King> kings = Arrays.asList(
+                new King(R.drawable.king_of_man_bg, "Король людей", "...", "Люди", "Дипломатия"),
+                new King(R.drawable.king_of_dragon_bg, "Король драконов", "...", "Драконы", "Дыхание дракона"),
+                new King(R.drawable.king_of_elf_bg, "Король эльфов", "...", "Эльфы", "Лесная магия"),
+                new King(R.drawable.king_of_gnom_bg, "Король гномов", "...", "Гномы", "Подземные ходы")
+        );
+
+        ArrayAdapter<King> adapter = new ArrayAdapter<King>(this,
+                android.R.layout.simple_spinner_item, kings) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                TextView view = (TextView) super.getView(position, convertView, parent);
+                view.setText(getItem(position).getName());
+                return view;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                TextView view = (TextView) super.getDropDownView(position, convertView, parent);
+                view.setText(getItem(position).getName());
+                return view;
+            }
+        };
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerWhiteKing.setAdapter(adapter);
+        spinnerBlackKing.setAdapter(adapter);
+
+        spinnerWhiteKing.setSelection(0);
+        spinnerBlackKing.setSelection(0);
     }
 
     private void openTimeSelection() {
@@ -98,21 +138,43 @@ public class ColorSelectionActivity extends AppCompatActivity {
         }
     }
 
-    private void startGame(boolean isWhite) {
-        Log.d(TAG, "Starting game with color: " + (isWhite ? "white" : "black") +
-                ", time: " + selectedTimeMinutes + " minutes");
+    private void startOfflineGame() {
+        King whiteKing = (King) spinnerWhiteKing.getSelectedItem();
+        King blackKing = (King) spinnerBlackKing.getSelectedItem();
+
+        selectedWhiteKingType = getKingTypeFromName(whiteKing.getName());
+        selectedBlackKingType = getKingTypeFromName(blackKing.getName());
+
+        Log.d(TAG, "Starting offline game - White King: " + selectedWhiteKingType +
+                ", Black King: " + selectedBlackKingType + ", time: " + selectedTimeMinutes + " minutes");
 
         Intent intent = new Intent(this, ChessGameActivity.class);
         Bundle bundle = new Bundle();
-        bundle.putBoolean("player_color_white", isWhite);
+        bundle.putBoolean("is_online_game", false);
         bundle.putInt("game_time_minutes", selectedTimeMinutes);
         bundle.putInt("game_time_seconds", selectedTimeMinutes * 60);
         bundle.putBoolean("is_timed_game", selectedTimeMinutes > 0);
         bundle.putString("time_display", formatTimeForDisplay());
+
+        bundle.putString("white_player_name", "Игрок 1");
+        bundle.putString("black_player_name", "Игрок 2");
+        bundle.putString("white_king_type", selectedWhiteKingType);
+        bundle.putString("black_king_type", selectedBlackKingType);
+
         intent.putExtras(bundle);
 
         startActivity(intent);
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+    }
+
+    private String getKingTypeFromName(String kingName) {
+        switch (kingName) {
+            case "Король людей": return "human";
+            case "Король драконов": return "dragon";
+            case "Король эльфов": return "elf";
+            case "Король гномов": return "gnome";
+            default: return "human";
+        }
     }
 
     private String formatTimeForDisplay() {

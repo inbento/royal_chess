@@ -95,10 +95,10 @@
                 android:id="@+id/btnBack"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:text="←"
-                android:textSize="18sp"
                 android:backgroundTint="#f70f72"
-                android:textColor="#FFFFFF" />
+                android:text="←"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/tvCurrentPlayer"
@@ -158,32 +158,32 @@
                 android:id="@+id/indicatorWhite"
                 android:layout_marginEnd="12dp" />
 
-            <TextView
-                android:id="@+id/tvWhiteTimer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="10:00"
-                android:textColor="#FFFFFF"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Белые:"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:layout_marginStart="12dp"
-                android:layout_marginEnd="16dp" />
-
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="129dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Белые:"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvWhiteTimer"
+                    android:layout_width="118dp"
+                    android:layout_height="wrap_content"
+                    android:text="10:00"
+                    android:textColor="#FFFFFF"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
 
                 <ImageView
                     android:id="@+id/ivPlayerKing"

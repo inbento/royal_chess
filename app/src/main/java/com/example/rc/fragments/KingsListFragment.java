@@ -36,20 +36,9 @@ public class KingsListFragment extends Fragment implements KingsAdapter.OnKingSe
         View view = inflater.inflate(R.layout.fragment_kings_list, container, false);
         recyclerView = view.findViewById(R.id.rvKings);
 
-        loadSelectedKing();
         setupRecyclerView();
 
         return view;
-    }
-
-    private void loadSelectedKing() {
-        DatabaseHelper dbHelper = new DatabaseHelper(getContext());
-        SharedPreferences prefs = getActivity().getSharedPreferences("AppPrefs", MODE_PRIVATE);
-        int userId = prefs.getInt("currentUserId", -1);
-
-        if (userId != -1) {
-            currentSelectedKing = dbHelper.getSelectedKing(userId);
-        }
     }
 
     private void setupRecyclerView() {
@@ -132,7 +121,7 @@ public class KingsListFragment extends Fragment implements KingsAdapter.OnKingSe
 
             if (userId != -1) {
                 String kingType = getKingType(king);
-                boolean success = dbHelper.updateSelectedKing(userId, kingType);
+                boolean success = true;
 
                 if (success) {
                     currentSelectedKing = kingType;

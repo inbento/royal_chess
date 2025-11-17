@@ -46,4 +46,16 @@ public class GameSession {
         if (moves == null) moves = new ArrayList<>();
         moves.add(move);
     }
+
+    public boolean getOpponentKingType() {
+        return false;
+    }
+
+    public boolean getOpponentUsername() {
+        return false;
+    }
+
+    public boolean isPlayerWhite() {
+        return false;
+    }
 }

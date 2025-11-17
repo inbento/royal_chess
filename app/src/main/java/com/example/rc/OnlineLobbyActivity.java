@@ -121,8 +121,12 @@ public class OnlineLobbyActivity extends AppCompatActivity {
                     @Override
                     public void onMatchFound(GameSession session) {
                         runOnUiThread(() -> {
-                            Intent intent = new Intent(OnlineLobbyActivity.this, OnlineChessActivity.class);
+                            Intent intent = new Intent(OnlineLobbyActivity.this, ChessGameActivity.class);
                             intent.putExtra("session_id", session.getSessionId());
+                            intent.putExtra("is_online_game", true);
+                            intent.putExtra("opponent_username", session.getOpponentUsername());
+                            intent.putExtra("opponent_king_type", session.getOpponentKingType());
+                            intent.putExtra("player_color_white", session.isPlayerWhite());
                             startActivity(intent);
                             finish();
                         });

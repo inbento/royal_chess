@@ -26,9 +26,11 @@ public class ChessBoard {
     private int humanAbilityRemainingUsesBlack = 2;
     private boolean dragonFireShotUsedWhite = false;
     private boolean dragonFireShotUsedBlack = false;
-    private String activeKingAbility = null;
     private String playerKingAbility = null;
     private String opponentKingAbility = null;
+    private boolean elfAbilityActive = false;
+    private boolean humanAbilityActive = false;
+    private boolean dragonAbilityActive = false;
 
     public ChessBoard() {
         board = new ChessPiece[8][8];
@@ -278,7 +280,11 @@ public class ChessBoard {
     }
 
     public String getActiveKingAbility() {
-        return isWhiteTurn ? playerKingAbility : opponentKingAbility;
+        if (isWhiteTurn) {
+            return playerKingAbility;
+        } else {
+            return opponentKingAbility;
+        }
     }
 
     public void activateKingAbility(String kingType) {
@@ -288,21 +294,29 @@ public class ChessBoard {
             this.opponentKingAbility = kingType;
         }
 
+
+        elfAbilityActive = false;
+        humanAbilityActive = false;
+        dragonAbilityActive = false;
+
         switch (kingType) {
             case "gnome":
                 gnomeAbilityActive = true;
                 break;
             case "elf":
+                elfAbilityActive = true;
                 break;
             case "human":
+                humanAbilityActive = true;
                 break;
             case "dragon":
+                dragonAbilityActive = true;
                 break;
         }
     }
 
     public boolean activateElfAbility(int pawnRow, int pawnCol) {
-        if (!"elf".equals(activeKingAbility)) {
+        if (!isElfAbilityActive() || !"elf".equals(getActiveKingAbility())) {
             return false;
         }
 
@@ -324,6 +338,7 @@ public class ChessBoard {
             elfAbilityUsedBlack = true;
         }
 
+        elfAbilityActive = false;
         return true;
     }
 
@@ -342,7 +357,7 @@ public class ChessBoard {
     }
 
     public boolean activateHumanAbility(int enemyPawnRow, int enemyPawnCol) {
-        if (!"human".equals(activeKingAbility)) {
+        if (!isHumanAbilityActive() || !"human".equals(getActiveKingAbility())) {
             return false;
         }
 
@@ -373,6 +388,7 @@ public class ChessBoard {
             }
         }
 
+        humanAbilityActive = false;
         return true;
     }
 
@@ -403,7 +419,7 @@ public class ChessBoard {
     }
 
     public boolean activateDragonFireShot(int fromRow, int fromCol, int toRow, int toCol) {
-        if (!"dragon".equals(activeKingAbility)) {
+        if (!isDragonAbilityActive() || !"dragon".equals(getActiveKingAbility())) {
             return false;
         }
 
@@ -437,6 +453,7 @@ public class ChessBoard {
             dragonFireShotUsedBlack = true;
         }
 
+        dragonAbilityActive = false;
         return true;
     }
 
@@ -470,6 +487,59 @@ public class ChessBoard {
         }
 
         return available;
+    }
+
+    public void activateKingAbilityForWhite(String kingType) {
+        this.playerKingAbility = kingType;
+        applyKingAbility(kingType, true);
+    }
+
+    public void activateKingAbilityForBlack(String kingType) {
+        this.opponentKingAbility = kingType;
+        applyKingAbility(kingType, false);
+    }
+
+    private void applyKingAbility(String kingType, boolean isWhite) {
+        switch (kingType) {
+            case "gnome":
+                gnomeAbilityActive = true;
+                break;
+            case "elf":
+                if (isWhite) {
+                    elfAbilityUsedWhite = false;
+                } else {
+                    elfAbilityUsedBlack = false;
+                }
+                break;
+            case "human":
+                if (isWhite) {
+                    humanAbilityUsedWhite = false;
+                    humanAbilityRemainingUsesWhite = 2;
+                } else {
+                    humanAbilityUsedBlack = false;
+                    humanAbilityRemainingUsesBlack = 2;
+                }
+                break;
+            case "dragon":
+                if (isWhite) {
+                    dragonFireShotUsedWhite = false;
+                } else {
+                    dragonFireShotUsedBlack = false;
+                }
+                break;
+        }
+    }
+
+    public boolean isElfAbilityActive() {
+        return elfAbilityActive && "elf".equals(getActiveKingAbility());
+    }
+
+    public boolean isHumanAbilityActive() {
+        return humanAbilityActive && "human".equals(getActiveKingAbility());
+    }
+
+    public boolean isDragonAbilityActive() {
+        return dragonAbilityActive && "dragon".equals(getActiveKingAbility());
     }
 
 }

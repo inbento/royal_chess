@@ -73,9 +73,19 @@ public class ChessGameActivity extends AppCompatActivity
             isTimedGame = extras.getBoolean("is_timed_game", true);
             isOnlineGame = extras.getBoolean("is_online_game", false);
 
+            Log.d("ChessGameActivity", "Intent extras received:");
+            for (String key : extras.keySet()) {
+                Log.d("ChessGameActivity", key + " = " + extras.get(key));
+            }
+
             if (isOnlineGame) {
                 opponentUsername = extras.getString("opponent_username", "Оппонент");
                 opponentKingType = extras.getString("opponent_king_type", "human");
+            } else {
+                String whiteKingTypeFromIntent = extras.getString("white_king_type", "human");
+                String blackKingTypeFromIntent = extras.getString("black_king_type", "human");
+                Log.d("ChessGameActivity", "White king from intent: " + whiteKingTypeFromIntent);
+                Log.d("ChessGameActivity", "Black king from intent: " + blackKingTypeFromIntent);
             }
         }
 
@@ -100,7 +110,6 @@ public class ChessGameActivity extends AppCompatActivity
 
         setupAdapters();
         updatePlayerTurn();
-        loadSelectedKing();
         initKingView();
     }
 
@@ -131,71 +140,121 @@ public class ChessGameActivity extends AppCompatActivity
         tvOpponentName = findViewById(R.id.tvOpponentName);
         ivPlayerKing = findViewById(R.id.ivPlayerKing);
         ivOpponentKing = findViewById(R.id.ivOpponentKing);
+
+        ivPlayerKing.setOnClickListener(v -> {
+            activateKingAbility();
+        });
+
+        ivOpponentKing.setOnClickListener(v -> {
+            activateKingAbility();
+        });
     }
 
     private void setupOnlineUI() {
-
         DatabaseHelper dbHelper = new DatabaseHelper(this);
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         int userId = prefs.getInt("currentUserId", -1);
         User currentUser = dbHelper.getUser(userId);
 
         String playerName = currentUser != null ? currentUser.getUsername() : "Игрок";
+        String opponentName = opponentUsername;
 
         if (isPlayerWhite) {
             tvPlayerName.setText(playerName + " (Белые)");
-            tvOpponentName.setText(opponentUsername + " (Черные)");
+            tvOpponentName.setText(opponentName + " (Черные)");
+            setupKingsForOnline(playerKingType, opponentKingType);
         } else {
             tvPlayerName.setText(playerName + " (Черные)");
-            tvOpponentName.setText(opponentUsername + " (Белые)");
+            tvOpponentName.setText(opponentName + " (Белые)");
+            setupKingsForOnline(opponentKingType, playerKingType);
         }
 
         tvPlayerName.setVisibility(View.VISIBLE);
         tvOpponentName.setVisibility(View.VISIBLE);
-
-        setupKingsForOnline();
     }
 
     private void setupOfflineUI() {
-        tvPlayerName.setVisibility(View.GONE);
-        tvOpponentName.setVisibility(View.GONE);
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            String whitePlayerName = extras.getString("white_player_name", "Игрок 1");
+            String blackPlayerName = extras.getString("black_player_name", "Игрок 2");
+            String whiteKingType = extras.getString("white_king_type", "human");
+            String blackKingType = extras.getString("black_king_type", "human");
 
-        loadSelectedKing();
-        initKingView();
-    }
+            Log.d("ChessGameActivity", "Setting up offline UI - White: " + whiteKingType + ", Black: " + blackKingType);
 
-    private void loadSelectedKing() {
-        DatabaseHelper dbHelper = new DatabaseHelper(this);
-        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-        int userId = prefs.getInt("currentUserId", -1);
+            tvPlayerName.setText(whitePlayerName);
+            tvOpponentName.setText(blackPlayerName);
 
-        if (userId != -1) {
-            playerKingType = dbHelper.getSelectedKing(userId);
-        } else {
-            playerKingType = "human";
+            int whiteKingDrawable = getKingDrawableId(whiteKingType);
+            int blackKingDrawable = getKingDrawableId(blackKingType);
+
+            Log.d("ChessGameActivity", "White king drawable ID: " + whiteKingDrawable);
+            Log.d("ChessGameActivity", "Black king drawable ID: " + blackKingDrawable);
+
+            ivPlayerKing.setImageResource(whiteKingDrawable);
+            ivOpponentKing.setImageResource(blackKingDrawable);
+
+            this.playerKingType = whiteKingType;
+            this.opponentKingType = blackKingType;
+
+            Log.d("ChessGameActivity", "Saved - playerKingType: " + playerKingType + ", opponentKingType: " + opponentKingType);
+
+            if (chessBoard != null) {
+                chessBoard.activateKingAbilityForWhite(whiteKingType);
+                chessBoard.activateKingAbilityForBlack(blackKingType);
+            }
         }
+
+        tvPlayerName.setVisibility(View.VISIBLE);
+        tvOpponentName.setVisibility(View.VISIBLE);
     }
 
-    private void setupKingsForOnline() {
-        loadSelectedKing();
+    private void setupKingsForOnline(String playerKingType, String opponentKingType) {
         int playerKingDrawable = getKingDrawableId(playerKingType);
-        ivPlayerKing.setImageResource(playerKingDrawable);
-
         int opponentKingDrawable = getKingDrawableId(opponentKingType);
+
+        ivPlayerKing.setImageResource(playerKingDrawable);
         ivOpponentKing.setImageResource(opponentKingDrawable);
 
         if (chessBoard != null) {
-            chessBoard.activateKingAbility(playerKingType);
+            if (isPlayerWhite) {
+                chessBoard.activateKingAbilityForWhite(playerKingType);
+                chessBoard.activateKingAbilityForBlack(opponentKingType);
+            } else {
+                chessBoard.activateKingAbilityForWhite(opponentKingType);
+                chessBoard.activateKingAbilityForBlack(playerKingType);
+            }
         }
+    }
+
+    private void setupKingsForOffline(String whiteKingType, String blackKingType) {
+        int whiteKingDrawable = getKingDrawableId(whiteKingType);
+        int blackKingDrawable = getKingDrawableId(blackKingType);
+
+        ivPlayerKing.setImageResource(whiteKingDrawable);
+        ivOpponentKing.setImageResource(blackKingDrawable);
+
+        this.playerKingType = whiteKingType;
+        this.opponentKingType = blackKingType;
     }
 
     private void initKingView() {
         ivPlayerKing = findViewById(R.id.ivPlayerKing);
+        ivOpponentKing = findViewById(R.id.ivOpponentKing);
+
+        Log.d("ChessGameActivity", "initKingView - playerKingType: " + playerKingType);
 
         int kingDrawableId = getKingDrawableId(playerKingType);
         ivPlayerKing.setImageResource(kingDrawableId);
 
         ivPlayerKing.setOnClickListener(v -> {
+            Log.d("ChessGameActivity", "White king clicked, type: " + playerKingType);
+            activateKingAbility();
+        });
+
+        ivOpponentKing.setOnClickListener(v -> {
+            Log.d("ChessGameActivity", "Black king clicked, type: " + opponentKingType);
             activateKingAbility();
         });
     }
@@ -212,22 +271,33 @@ public class ChessGameActivity extends AppCompatActivity
 
     private void activateKingAbility() {
         if (chessBoard != null) {
-            chessBoard.activateKingAbility(playerKingType);
+            String currentKingType;
+            boolean isWhiteKingClicked = false;
 
-            String abilityName = getKingAbilityName(playerKingType);
+            if (chessBoard.isWhiteTurn()) {
+                currentKingType = playerKingType;
+                isWhiteKingClicked = true;
+            } else {
+                currentKingType = opponentKingType;
+                isWhiteKingClicked = false;
+            }
+
+            chessBoard.activateKingAbility(currentKingType);
+
+            String abilityName = getKingAbilityName(currentKingType);
             String message = "Активирована способность: " + abilityName;
 
-            if ("elf".equals(playerKingType)) {
+            if ("elf".equals(currentKingType)) {
                 message += "\nНажмите на свою пешку чтобы превратить её в коня";
             }
-            else if ("human".equals(playerKingType)) {
+            else if ("human".equals(currentKingType)) {
                 message += "\nНажмите на вражескую пешку на вашей половине доски чтобы превратить её в свою";
             }
-            else if ("dragon".equals(playerKingType)) {
-                message += "\nПешка может выстрелить огнем по горизонтали/вертикали";
+            else if ("dragon".equals(currentKingType)) {
+                message += "\nВыберите свою пешку и нажмите на вражескую фигуру по горизонтали/вертикали для выстрела";
             }
-            else if ("gnom".equals(playerKingType)) {
-                message += "\nПешка могут двигаться и бить назад";
+            else if ("gnome".equals(currentKingType)) {
+                message += "\nПешки могут двигаться и бить назад (пассивная способность)";
             }
 
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
@@ -329,7 +399,7 @@ public class ChessGameActivity extends AppCompatActivity
             return;
         }
 
-        if (chessBoard.isElfAbilityAvailable()) {
+        if (chessBoard.isElfAbilityAvailable() && chessBoard.isElfAbilityActive()) {
             boolean success = chessBoard.activateElfAbility(row, col);
             if (success) {
                 Toast.makeText(this, "Пешка превращена в коня!", Toast.LENGTH_SHORT).show();
@@ -338,7 +408,7 @@ public class ChessGameActivity extends AppCompatActivity
             }
         }
 
-        if (chessBoard.isHumanAbilityAvailable()) {
+        if (chessBoard.isHumanAbilityAvailable() && chessBoard.isHumanAbilityActive()) {
             boolean success = chessBoard.activateHumanAbility(row, col);
             if (success) {
                 int remaining = chessBoard.getHumanAbilityRemainingUses();
@@ -350,7 +420,8 @@ public class ChessGameActivity extends AppCompatActivity
             }
         }
 
-        if (chessBoard.isDragonFireShotAvailable() && chessBoard.getSelectedPiece() != null) {
+        if (chessBoard.isDragonFireShotAvailable() && chessBoard.isDragonAbilityActive() &&
+                chessBoard.getSelectedPiece() != null) {
             ChessPiece selected = chessBoard.getSelectedPiece();
             if (selected.getType() == ChessPiece.PieceType.PAWN) {
                 boolean success = chessBoard.activateDragonFireShot(
@@ -358,7 +429,6 @@ public class ChessGameActivity extends AppCompatActivity
                 if (success) {
                     Toast.makeText(this, "Огненный выстрел! Фигура сожжена!", Toast.LENGTH_SHORT).show();
                     updateBoard();
-
                     clearAllSelection();
                     chessBoard.selectPiece(-1, -1);
                     return;
