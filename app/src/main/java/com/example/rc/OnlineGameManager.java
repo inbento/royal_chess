@@ -1,5 +1,7 @@
 package com.example.rc;
 
+import android.util.Log;
+
 import com.google.firebase.database.*;
 import com.example.rc.models.User;
 import com.example.rc.models.King;
@@ -119,19 +121,31 @@ public class OnlineGameManager {
         String player1Color = determineColors(preferredColor, opponent.color);
         String player2Color = player1Color.equals("white") ? "black" : "white";
 
-        String sessionId = "session_" + currentUser.getOnlineId() + "_" + opponent.userId + "_" + System.currentTimeMillis();
+        String sessionId = "session_" + System.currentTimeMillis() + "_" + new Random().nextInt(1000);
 
         GameSession session = new GameSession(sessionId);
+
         session.setPlayer1Id(currentUser.getOnlineId());
         session.setPlayer2Id(opponent.userId);
         session.setPlayer1Color(player1Color);
         session.setPlayer2Color(player2Color);
         session.setTimeMinutes(timeMinutes);
 
+        session.setPlayer1Username(currentUser.getUsername());
+        session.setPlayer2Username(opponent.username);
+        session.setPlayer1KingType(getKingTypeFromFaction(king.getFaction()));
+        session.setPlayer2KingType(opponent.kingType);
+
+        Log.d("OnlineGameManager", "Creating session:" +
+                "\nPlayer1: " + currentUser.getUsername() + " (" + player1Color + ", " + getKingTypeFromFaction(king.getFaction()) + ")" +
+                "\nPlayer2: " + opponent.username + " (" + player2Color + ", " + opponent.kingType + ")" +
+                "\nTime: " + timeMinutes + " minutes");
+
         firebaseManager.createGameSession(session, new DatabaseReference.CompletionListener() {
             @Override
             public void onComplete(DatabaseError error, DatabaseReference ref) {
                 if (error != null) {
+                    Log.e("OnlineGameManager", "Error creating session: " + error.getMessage());
                     if (userMatchmakingListener != null) {
                         userMatchmakingListener.onError(error.getMessage());
                     }
@@ -178,4 +192,15 @@ public class OnlineGameManager {
     public void getGameSession(String sessionId, ValueEventListener listener) {
         firebaseManager.getGameSession(sessionId, listener);
     }
+
+    private String getKingTypeFromFaction(String faction) {
+        switch (faction) {
+            case "Люди": return "human";
+            case "Драконы": return "dragon";
+            case "Эльфы": return "elf";
+            case "Гномы": return "gnome";
+            default: return "human";
+        }
+    }
+
 }
