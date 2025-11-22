@@ -62,6 +62,9 @@ public class OnlineLobbyActivity extends AppCompatActivity {
         tvSearchStatus = findViewById(R.id.tvSearchStatus);
         tvQueueInfo = findViewById(R.id.tvQueueInfo);
         progressSearch = findViewById(R.id.progressSearch);
+
+        Button btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> finish());
     }
 
     private void setupKingSpinner() {
@@ -102,6 +105,8 @@ public class OnlineLobbyActivity extends AppCompatActivity {
             Toast.makeText(this, "Войдите в аккаунт для онлайн игры", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        checkActiveSessions();
 
         String color = getSelectedColor();
         int timeMinutes = getSelectedTime();
@@ -169,6 +174,10 @@ public class OnlineLobbyActivity extends AppCompatActivity {
                 });
     }
 
+    private void checkActiveSessions() {
+        Log.d("OnlineLobby", "Checking for active sessions...");
+    }
+
     private String generateMatchmakingId(User user) {
         String onlineId = user.getOnlineId();
         return "match_" + onlineId + "_" + System.currentTimeMillis() + "_" + new Random().nextInt(1000);
@@ -188,7 +197,7 @@ public class OnlineLobbyActivity extends AppCompatActivity {
         int selectedId = radioColorGroup.getCheckedRadioButtonId();
         if (selectedId == R.id.radioWhite) return "white";
         if (selectedId == R.id.radioBlack) return "black";
-        return "random";
+        return "white";
     }
 
     private int getSelectedTime() {
@@ -196,7 +205,7 @@ public class OnlineLobbyActivity extends AppCompatActivity {
         if (selectedId == R.id.radio5min) return 5;
         if (selectedId == R.id.radio10min) return 10;
         if (selectedId == R.id.radio30min) return 30;
-        return -1;
+        return 10;
     }
 
     private void resetSearchUI() {

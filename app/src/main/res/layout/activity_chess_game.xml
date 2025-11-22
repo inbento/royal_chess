@@ -30,40 +30,30 @@
             android:padding="12dp"
             android:layout_marginBottom="8dp">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+            <View
+                android:id="@+id/indicatorBlack"
+                android:layout_width="4dp"
+                android:layout_height="30dp"
+                android:background="#FF0000"
+                android:visibility="invisible"
+                android:layout_marginEnd="12dp" />
 
-                <TextView
-                    android:id="@+id/tvOpponentName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Оппонент"
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"
-                    android:layout_marginEnd="8dp" />
-
-                <ImageView
-                    android:id="@+id/ivOpponentKing"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:src="@drawable/king_of_man_bg" />
-
-            </LinearLayout>
+            <ImageView
+                android:id="@+id/ivOpponentKing"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/king_of_man_bg"
+                android:layout_marginEnd="8dp" />
 
             <TextView
+                android:id="@+id/tvOpponentName"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Черные:"
+                android:text="Оппонент"
                 android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="12dp" />
+                android:textSize="14sp"
+                android:layout_marginEnd="8dp" />
 
             <TextView
                 android:id="@+id/tvBlackTimer"
@@ -73,14 +63,6 @@
                 android:textColor="#FFFFFF"
                 android:textSize="20sp"
                 android:textStyle="bold" />
-
-            <View
-                android:layout_width="4dp"
-                android:layout_height="30dp"
-                android:background="#FF0000"
-                android:visibility="invisible"
-                android:id="@+id/indicatorBlack"
-                android:layout_marginStart="12dp" />
 
         </LinearLayout>
 
@@ -151,56 +133,38 @@
             android:layout_marginTop="8dp">
 
             <View
+                android:id="@+id/indicatorWhite"
                 android:layout_width="4dp"
                 android:layout_height="30dp"
                 android:background="#00FF00"
                 android:visibility="invisible"
-                android:id="@+id/indicatorWhite"
                 android:layout_marginEnd="12dp" />
 
-            <LinearLayout
+            <ImageView
+                android:id="@+id/ivPlayerKing"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/king_of_man_bg"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvPlayerName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Игрок"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvWhiteTimer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="129dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="16dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="Белые:"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvWhiteTimer"
-                    android:layout_width="118dp"
-                    android:layout_height="wrap_content"
-                    android:text="10:00"
-                    android:textColor="#FFFFFF"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <ImageView
-                    android:id="@+id/ivPlayerKing"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:src="@drawable/king_of_man_bg"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
-                    android:id="@+id/tvPlayerName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Игрок"
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp" />
-
-            </LinearLayout>
+                android:text="10:00"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
 

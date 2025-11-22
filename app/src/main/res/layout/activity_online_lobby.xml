@@ -3,166 +3,180 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:background="@drawable/bg_gradient"
-    android:gravity="center">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🎮 Поиск противника"
-        android:textColor="#FFFFFF"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="40dp" />
+    android:background="@drawable/bg_gradient">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#FFFFFF"
-        android:padding="20dp"
-        android:elevation="8dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Цвет фигур"
-            android:textColor="#000000"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <RadioGroup
-            android:id="@+id/radioColorGroup"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp">
-
-            <RadioButton
-                android:id="@+id/radioWhite"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Белые"
-                android:textSize="14sp" />
-
-            <RadioButton
-                android:id="@+id/radioBlack"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Черные"
-                android:textSize="14sp" />
-
-            <RadioButton
-                android:id="@+id/radioRandom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Случайный"
-                android:textSize="14sp"
-                android:checked="true" />
-
-        </RadioGroup>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Время на игру"
-            android:textColor="#000000"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <RadioGroup
-            android:id="@+id/radioTimeGroup"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp">
-
-            <RadioButton
-                android:id="@+id/radio5min"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="5 минут"
-                android:textSize="14sp" />
-
-            <RadioButton
-                android:id="@+id/radio10min"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="10 минут"
-                android:textSize="14sp"
-                android:checked="true" />
-
-            <RadioButton
-                android:id="@+id/radio30min"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="30 минут"
-                android:textSize="14sp" />
-
-            <RadioButton
-                android:id="@+id/radioRandomTime"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="🎲 Случайное"
-                android:textSize="14sp" />
-
-        </RadioGroup>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Выберите короля"
-            android:textColor="#000000"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <Spinner
-            android:id="@+id/spinnerKing"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginBottom="24dp"
-            android:background="@drawable/edit_text_bg" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="#20000000">
 
         <Button
-            android:id="@+id/btnFindMatch"
-            android:layout_width="match_parent"
+            android:id="@+id/btnBack"
+            android:layout_width="50dp"
             android:layout_height="50dp"
-            android:text="🔍 Найти игру"
+            android:text="←"
+            android:textSize="20sp"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:background="@drawable/btn_online_bg" />
+            android:background="@android:color/transparent"
+            android:layout_marginEnd="16dp" />
 
         <TextView
-            android:id="@+id/tvSearchStatus"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Ожидание выбора параметров..."
-            android:textColor="#666666"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:layout_marginTop="16dp"
-            android:visibility="gone" />
-
-        <ProgressBar
-            android:id="@+id/progressSearch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="16dp"
-            android:visibility="gone" />
+            android:layout_weight="1"
+            android:text="Поиск противника"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvQueueInfo"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Игроков в очереди: 0"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp"
-        android:gravity="center"
-        android:layout_marginTop="16dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="20dp"
+            android:elevation="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Цвет фигур"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/radioColorGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+
+                <RadioButton
+                    android:id="@+id/radioWhite"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Белые"
+                    android:textSize="14sp"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:id="@+id/radioBlack"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Черные"
+                    android:textSize="14sp" />
+
+            </RadioGroup>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Время на игру"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/radioTimeGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp">
+
+                <RadioButton
+                    android:id="@+id/radio5min"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="5 минут"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/radio10min"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="10 минут"
+                    android:textSize="14sp"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:id="@+id/radio30min"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="30 минут"
+                    android:textSize="14sp" />
+
+            </RadioGroup>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Выберите короля"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <Spinner
+                android:id="@+id/spinnerKing"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="24dp"
+                android:background="@drawable/edit_text_bg" />
+
+            <Button
+                android:id="@+id/btnFindMatch"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:text="Найти игру"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:background="@drawable/btn_online_bg" />
+
+            <TextView
+                android:id="@+id/tvSearchStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ожидание выбора параметров..."
+                android:textColor="#666666"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/progressSearch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvQueueInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Игроков в очереди: 0"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
 
 </LinearLayout>

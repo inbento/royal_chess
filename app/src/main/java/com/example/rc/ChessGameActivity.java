@@ -21,6 +21,8 @@ import com.example.rc.adapters.PromotionAdapter;
 import com.example.rc.chess.ChessBoard;
 import com.example.rc.chess.ChessPiece;
 import com.example.rc.chess.ChessTimer;
+import com.example.rc.chess.pieces.Knight;
+import com.example.rc.chess.pieces.Pawn;
 import com.example.rc.database.DatabaseHelper;
 import com.example.rc.models.ChessMove;
 import com.example.rc.models.GameStat;
@@ -29,6 +31,7 @@ import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
+import android.os.Handler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,9 +73,14 @@ public class ChessGameActivity extends AppCompatActivity
     private String currentUserId;
     private ChildEventListener movesListener;
     private ValueEventListener boardStateListener;
+    private ChildEventListener abilityListener;
+    private ChildEventListener transformationListener;
+    private ChildEventListener dragonFireListener;
+    private ValueEventListener playerExitListener;
     private boolean isMyTurn = false;
     private int promotionFromRow = -1;
     private int promotionFromCol = -1;
+    private boolean isGameFinished = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,6 +164,9 @@ public class ChessGameActivity extends AppCompatActivity
         tvCurrentPlayer = findViewById(R.id.tvCurrentPlayer);
         btnBack = findViewById(R.id.btnBack);
         btnRestart = findViewById(R.id.btnRestart);
+        if (isOnlineGame) {
+            btnRestart.setVisibility(View.GONE);
+        }
 
         rvPromotion = findViewById(R.id.rvPromotion);
         promotionDialog = findViewById(R.id.promotionDialog);
@@ -163,7 +174,13 @@ public class ChessGameActivity extends AppCompatActivity
         chessGrid.setColumnCount(8);
         chessGrid.setRowCount(8);
 
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            if (isOnlineGame) {
+                showExitConfirmationDialog();
+            } else {
+                finish();
+            }
+        });
         btnRestart.setOnClickListener(v -> restartGame());
 
         if (promotionDialog != null) {
@@ -188,6 +205,30 @@ public class ChessGameActivity extends AppCompatActivity
         });
     }
 
+    private void checkGameStatus() {
+        if (!isOnlineGame) return;
+
+        FirebaseManager.getInstance().getGameSession(sessionId, new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String status = dataSnapshot.child("status").getValue(String.class);
+                    if ("finished".equals(status) || "abandoned".equals(status)) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(ChessGameActivity.this, "Эта игра уже завершена", Toast.LENGTH_LONG).show();
+                            finish();
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Error checking game status: " + databaseError.getMessage());
+            }
+        });
+    }
+
     private void setupOnlineGame() {
         DatabaseHelper dbHelper = new DatabaseHelper(this);
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
@@ -204,12 +245,147 @@ public class ChessGameActivity extends AppCompatActivity
             currentUserId = "unknown_" + System.currentTimeMillis();
         }
 
-        // Добавляем логирование sessionId
         Log.d("ChessGameActivity", "Connecting to session: " + sessionId);
+
+        checkGameStatus();
 
         setupBoardStateListener();
         setupMovesListener();
+        setupAbilityListeners();
+        setupTransformationListeners();
+        setupDragonFireListeners();
+        setupPlayerExitListener();
         determineTurn();
+    }
+
+    private void setupAbilityListeners() {
+        abilityListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
+                try {
+                    Map<String, Object> abilityData = (Map<String, Object>) dataSnapshot.getValue();
+                    if (abilityData != null) {
+                        String playerId = (String) abilityData.get("playerId");
+                        String kingType = (String) abilityData.get("kingType");
+                        Boolean isWhiteTurn = (Boolean) abilityData.get("isWhiteTurn");
+
+                        if (playerId != null && !playerId.equals(currentUserId) && isWhiteTurn != null) {
+                            applyOpponentAbilityActivation(kingType, isWhiteTurn);
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("ChessGameActivity", "Error processing ability activation", e);
+                }
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Ability listener cancelled: " + databaseError.getMessage());
+            }
+        };
+
+        FirebaseManager.getInstance().listenForAbilityActivations(sessionId, abilityListener);
+    }
+
+    private void setupTransformationListeners() {
+        transformationListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
+                try {
+                    Map<String, Object> transformData = (Map<String, Object>) dataSnapshot.getValue();
+                    if (transformData != null) {
+                        String playerId = (String) transformData.get("playerId");
+                        Long rowLong = (Long) transformData.get("row");
+                        Long colLong = (Long) transformData.get("col");
+                        String newPieceType = (String) transformData.get("newPieceType");
+                        Boolean changeColor = (Boolean) transformData.get("changeColor");
+
+                        if (playerId != null && !playerId.equals(currentUserId) &&
+                                rowLong != null && colLong != null) {
+                            applyOpponentPieceTransformation(
+                                    rowLong.intValue(),
+                                    colLong.intValue(),
+                                    newPieceType,
+                                    changeColor != null ? changeColor : false
+                            );
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("ChessGameActivity", "Error processing piece transformation", e);
+                }
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Transformation listener cancelled: " + databaseError.getMessage());
+            }
+        };
+
+        FirebaseManager.getInstance().listenForPieceTransformations(sessionId, transformationListener);
+    }
+
+    private void applyOpponentAbilityActivation(String kingType, boolean isWhiteTurn) {
+        runOnUiThread(() -> {
+            Log.d("ChessGameActivity", "Applying opponent ability: " + kingType + " for " + (isWhiteTurn ? "white" : "black"));
+
+            if (isWhiteTurn) {
+                chessBoard.activateKingAbilityForWhite(kingType);
+            } else {
+                chessBoard.activateKingAbilityForBlack(kingType);
+            }
+        });
+    }
+
+    private void applyOpponentPieceTransformation(int row, int col, String newPieceType, boolean changeColor) {
+        runOnUiThread(() -> {
+            Log.d("ChessGameActivity", "Applying opponent transformation at " + row + "," + col +
+                    " to " + newPieceType + " changeColor: " + changeColor);
+
+            ChessPiece originalPiece = chessBoard.getPiece(row, col);
+            if (originalPiece != null) {
+                boolean isWhite = originalPiece.isWhite();
+
+                if (changeColor) {
+                    isWhite = !isWhite;
+                    Log.d("ChessGameActivity", "Color changed to: " + (isWhite ? "white" : "black"));
+                }
+
+                switch (newPieceType) {
+                    case "knight":
+                        chessBoard.getBoard()[row][col] = new Knight(isWhite, row, col);
+                        break;
+                    case "pawn":
+                        chessBoard.getBoard()[row][col] = new Pawn(isWhite, row, col);
+                        break;
+                }
+
+                updateBoard();
+
+                if (chessBoard.getSelectedPiece() != null) {
+                    chessBoard.selectPiece(chessBoard.getSelectedPiece().getRow(),
+                            chessBoard.getSelectedPiece().getCol());
+                    highlightPossibleMoves();
+                }
+            }
+        });
     }
 
     private void setupBoardStateListener() {
@@ -310,16 +486,12 @@ public class ChessGameActivity extends AppCompatActivity
 
         String playerName = currentUser != null ? currentUser.getUsername() : "Игрок";
 
-        Log.d("ChessGameActivity", "setupOnlineUI - Player: " + playerName +
-                ", Opponent: " + opponentUsername +
-                ", Is White: " + isPlayerWhite);
-
         if (isPlayerWhite) {
-            tvPlayerName.setText(playerName + " (Белые)");
-            tvOpponentName.setText(opponentUsername + " (Черные)");
+            tvPlayerName.setText(playerName);
+            tvOpponentName.setText(opponentUsername);
         } else {
-            tvPlayerName.setText(playerName + " (Черные)");
-            tvOpponentName.setText(opponentUsername + " (Белые)");
+            tvPlayerName.setText(opponentUsername);
+            tvOpponentName.setText(playerName);
         }
 
         tvPlayerName.setVisibility(View.VISIBLE);
@@ -332,29 +504,63 @@ public class ChessGameActivity extends AppCompatActivity
         loadSelectedKing();
 
         Log.d("ChessGameActivity", "setupKingsForOnline - Player King: " + playerKingType +
-                ", Opponent King: " + opponentKingType);
+                ", Opponent King: " + opponentKingType +
+                ", Is Player White: " + isPlayerWhite);
 
-        int playerKingDrawable = getKingDrawableId(playerKingType);
-        int opponentKingDrawable = getKingDrawableId(opponentKingType);
+        new Handler().postDelayed(() -> {
+            String whiteKingType, blackKingType;
 
-        ivPlayerKing.setImageResource(playerKingDrawable);
-        ivOpponentKing.setImageResource(opponentKingDrawable);
-
-        if (chessBoard != null) {
             if (isPlayerWhite) {
-                chessBoard.activateKingAbilityForWhite(playerKingType);
-                chessBoard.activateKingAbilityForBlack(opponentKingType);
+                whiteKingType = playerKingType;
+                blackKingType = opponentKingType;
             } else {
-                chessBoard.activateKingAbilityForWhite(opponentKingType);
-                chessBoard.activateKingAbilityForBlack(playerKingType);
+                whiteKingType = opponentKingType;
+                blackKingType = playerKingType;
             }
-        }
+
+            int whiteKingDrawable = getKingDrawableId(whiteKingType);
+            int blackKingDrawable = getKingDrawableId(blackKingType);
+
+            runOnUiThread(() -> {
+                ivPlayerKing.setImageResource(whiteKingDrawable);
+                ivOpponentKing.setImageResource(blackKingDrawable);
+
+                Log.d("ChessGameActivity", "Kings UI updated - White: " + whiteKingType +
+                        " (" + whiteKingDrawable + "), Black: " + blackKingType +
+                        " (" + blackKingDrawable + ")");
+            });
+
+            if (chessBoard != null) {
+                chessBoard.activateKingAbilityForWhite(whiteKingType);
+                chessBoard.activateKingAbilityForBlack(blackKingType);
+
+                Log.d("ChessGameActivity", "Abilities activated - White: " + whiteKingType +
+                        ", Black: " + blackKingType);
+            }
+        }, 500);
     }
 
     private void loadSelectedKing() {
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         playerKingType = prefs.getString("selected_king_type", "human");
         Log.d("ChessGameActivity", "Loaded selected king: " + playerKingType);
+    }
+
+    private void syncKingDisplay() {
+        if (!isOnlineGame) return;
+
+        new Handler().postDelayed(() -> {
+            String whiteKingType = isPlayerWhite ? playerKingType : opponentKingType;
+            String blackKingType = isPlayerWhite ? opponentKingType : playerKingType;
+
+            runOnUiThread(() -> {
+                ivPlayerKing.setImageResource(getKingDrawableId(whiteKingType));
+                ivOpponentKing.setImageResource(getKingDrawableId(blackKingType));
+
+                Log.d("ChessGameActivity", "King display synced - White: " + whiteKingType +
+                        ", Black: " + blackKingType);
+            });
+        }, 1000);
     }
 
     private void setupOfflineUI() {
@@ -365,24 +571,17 @@ public class ChessGameActivity extends AppCompatActivity
             String whiteKingType = extras.getString("white_king_type", "human");
             String blackKingType = extras.getString("black_king_type", "human");
 
-            Log.d("ChessGameActivity", "Setting up offline UI - White: " + whiteKingType + ", Black: " + blackKingType);
-
             tvPlayerName.setText(whitePlayerName);
             tvOpponentName.setText(blackPlayerName);
 
             int whiteKingDrawable = getKingDrawableId(whiteKingType);
             int blackKingDrawable = getKingDrawableId(blackKingType);
 
-            Log.d("ChessGameActivity", "White king drawable ID: " + whiteKingDrawable);
-            Log.d("ChessGameActivity", "Black king drawable ID: " + blackKingDrawable);
-
             ivPlayerKing.setImageResource(whiteKingDrawable);
             ivOpponentKing.setImageResource(blackKingDrawable);
 
             this.playerKingType = whiteKingType;
             this.opponentKingType = blackKingType;
-
-            Log.d("ChessGameActivity", "Saved - playerKingType: " + playerKingType + ", opponentKingType: " + opponentKingType);
 
             if (chessBoard != null) {
                 chessBoard.activateKingAbilityForWhite(whiteKingType);
@@ -450,36 +649,58 @@ public class ChessGameActivity extends AppCompatActivity
         }
 
         Log.d("ChessGameActivity", "Getting drawable for king: " + kingType);
+        int drawableId;
         switch (kingType) {
-            case "human": return R.drawable.king_of_man_bg;
-            case "dragon": return R.drawable.king_of_dragon_bg;
-            case "elf": return R.drawable.king_of_elf_bg;
-            case "gnome": return R.drawable.king_of_gnom_bg;
+            case "human":
+                drawableId = R.drawable.king_of_man_bg;
+                break;
+            case "dragon":
+                drawableId = R.drawable.king_of_dragon_bg;
+                break;
+            case "elf":
+                drawableId = R.drawable.king_of_elf_bg;
+                break;
+            case "gnome":
+                drawableId = R.drawable.king_of_gnom_bg;
+                break;
             default:
                 Log.w("ChessGameActivity", "Unknown king type: " + kingType + ", using default");
-                return R.drawable.king_of_man_bg;
+                drawableId = R.drawable.king_of_man_bg;
         }
+
+        Log.d("ChessGameActivity", "Drawable ID for " + kingType + " = " + drawableId);
+        return drawableId;
     }
 
     private void activateKingAbility() {
         if (chessBoard != null) {
             String currentKingType;
+
             if (chessBoard.isWhiteTurn()) {
                 currentKingType = playerKingType;
             } else {
                 currentKingType = opponentKingType;
             }
 
-            if (isOnlineGame) {
-                if ((chessBoard.isWhiteTurn() && !isPlayerWhite) ||
-                        (!chessBoard.isWhiteTurn() && isPlayerWhite)) {
-                    Toast.makeText(this, "Сейчас не ваш ход для активации способности", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+
+            boolean isCurrentPlayerTurn = (chessBoard.isWhiteTurn() && isPlayerWhite) ||
+                    (!chessBoard.isWhiteTurn() && !isPlayerWhite);
+
+            if (isOnlineGame && !isCurrentPlayerTurn) {
+                Toast.makeText(this, "Сейчас не ваш ход для активации способности", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (chessBoard.isWhiteTurn()) {
+                currentKingType = isPlayerWhite ? playerKingType : opponentKingType;
+            } else {
+                currentKingType = !isPlayerWhite ? playerKingType : opponentKingType;
             }
 
             chessBoard.activateKingAbility(currentKingType);
-
+            if (isOnlineGame) {
+                sendAbilityActivation(currentKingType);
+            }
             String abilityName = getKingAbilityName(currentKingType);
             String message = "Активирована способность: " + abilityName;
 
@@ -503,6 +724,20 @@ public class ChessGameActivity extends AppCompatActivity
                 updateBoard();
                 highlightPossibleMoves();
             }
+        }
+    }
+
+    private void sendAbilityActivation(String kingType) {
+        try {
+            Map<String, Object> abilityData = new HashMap<>();
+            abilityData.put("playerId", currentUserId);
+            abilityData.put("kingType", kingType);
+            abilityData.put("timestamp", System.currentTimeMillis());
+            abilityData.put("isWhiteTurn", chessBoard.isWhiteTurn());
+
+            FirebaseManager.getInstance().sendAbilityActivation(sessionId, abilityData);
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error sending ability activation: " + e.getMessage());
         }
     }
 
@@ -603,6 +838,11 @@ public class ChessGameActivity extends AppCompatActivity
             boolean success = chessBoard.activateElfAbility(row, col);
             if (success) {
                 Toast.makeText(this, "Пешка превращена в коня!", Toast.LENGTH_SHORT).show();
+
+                if (isOnlineGame) {
+                    sendPieceTransformation(row, col, "knight", false);
+                }
+
                 updateBoard();
                 return;
             }
@@ -615,6 +855,11 @@ public class ChessGameActivity extends AppCompatActivity
                 String message = "Пешка перешла на вашу сторону!" +
                         (remaining > 0 ? "\nОсталось превращений: " + remaining : "");
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+
+                if (isOnlineGame) {
+                    sendPieceTransformation(row, col, "pawn", true);
+                }
+
                 updateBoard();
                 return;
             }
@@ -628,6 +873,11 @@ public class ChessGameActivity extends AppCompatActivity
                         selected.getRow(), selected.getCol(), row, col);
                 if (success) {
                     Toast.makeText(this, "Огненный выстрел! Фигура сожжена!", Toast.LENGTH_SHORT).show();
+
+                    if (isOnlineGame) {
+                        sendDragonFireShot(selected.getRow(), selected.getCol(), row, col);
+                    }
+
                     updateBoard();
                     clearAllSelection();
                     chessBoard.selectPiece(-1, -1);
@@ -673,6 +923,7 @@ public class ChessGameActivity extends AppCompatActivity
                     updateBoard();
                     updatePlayerTurn();
                     updateOnlineTurn();
+                    checkForCheckmate();
 
                     if (chessBoard.isCheckmate(!chessBoard.isWhiteTurn())) {
                         showGameOverDialog(chessBoard.isWhiteTurn());
@@ -697,6 +948,99 @@ public class ChessGameActivity extends AppCompatActivity
                     highlightPossibleMoves();
                 }
             }
+        }
+    }
+    private void sendDragonFireShot(int fromRow, int fromCol, int toRow, int toCol) {
+        try {
+            Map<String, Object> fireData = new HashMap<>();
+            fireData.put("playerId", currentUserId);
+            fireData.put("fromRow", fromRow);
+            fireData.put("fromCol", fromCol);
+            fireData.put("toRow", toRow);
+            fireData.put("toCol", toCol);
+            fireData.put("timestamp", System.currentTimeMillis());
+
+            FirebaseManager.getInstance().sendDragonFireShot(sessionId, fireData);
+
+            Log.d("ChessGameActivity", "Sent dragon fire shot from " + fromRow + "," + fromCol +
+                    " to " + toRow + "," + toCol);
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error sending dragon fire shot: " + e.getMessage());
+        }
+    }
+
+    private void setupDragonFireListeners() {
+        dragonFireListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
+                try {
+                    Map<String, Object> fireData = (Map<String, Object>) dataSnapshot.getValue();
+                    if (fireData != null) {
+                        String playerId = (String) fireData.get("playerId");
+                        Long fromRow = (Long) fireData.get("fromRow");
+                        Long fromCol = (Long) fireData.get("fromCol");
+                        Long toRow = (Long) fireData.get("toRow");
+                        Long toCol = (Long) fireData.get("toCol");
+
+                        if (playerId != null && !playerId.equals(currentUserId) &&
+                                fromRow != null && fromCol != null && toRow != null && toCol != null) {
+                            applyOpponentDragonFireShot(
+                                    fromRow.intValue(), fromCol.intValue(),
+                                    toRow.intValue(), toCol.intValue()
+                            );
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("ChessGameActivity", "Error processing dragon fire shot", e);
+                }
+            }
+
+            @Override public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
+            @Override public void onChildRemoved(DataSnapshot dataSnapshot) {}
+            @Override public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
+            @Override public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Dragon fire listener cancelled: " + databaseError.getMessage());
+            }
+        };
+
+        FirebaseManager.getInstance().listenForDragonFireShots(sessionId, dragonFireListener);
+    }
+
+    private void applyOpponentDragonFireShot(int fromRow, int fromCol, int toRow, int toCol) {
+        runOnUiThread(() -> {
+            Log.d("ChessGameActivity", "Applying opponent dragon fire from " + fromRow + "," + fromCol +
+                    " to " + toRow + "," + toCol);
+
+            chessBoard.getBoard()[toRow][toCol] = null;
+
+            updateBoard();
+
+            if (chessBoard.getSelectedPiece() != null) {
+                chessBoard.selectPiece(chessBoard.getSelectedPiece().getRow(),
+                        chessBoard.getSelectedPiece().getCol());
+                highlightPossibleMoves();
+            }
+
+            Toast.makeText(ChessGameActivity.this, "Противник сжег вашу фигуру!", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void sendPieceTransformation(int row, int col, String newPieceType, boolean changeColor) {
+        try {
+            Map<String, Object> transformData = new HashMap<>();
+            transformData.put("playerId", currentUserId);
+            transformData.put("row", row);
+            transformData.put("col", col);
+            transformData.put("newPieceType", newPieceType);
+            transformData.put("changeColor", changeColor);
+            transformData.put("timestamp", System.currentTimeMillis());
+
+            FirebaseManager.getInstance().sendPieceTransformation(sessionId, transformData);
+
+            Log.d("ChessGameActivity", "Sent piece transformation: " + newPieceType +
+                    " at " + row + "," + col + " changeColor: " + changeColor);
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error sending piece transformation: " + e.getMessage());
         }
     }
 
@@ -818,6 +1162,12 @@ public class ChessGameActivity extends AppCompatActivity
     }
 
     private void showGameOverDialog(boolean isWhiteWinner) {
+        if (isGameFinished) {
+            return;
+        }
+
+        isGameFinished = true;
+
         if (isTimedGame && chessTimer != null) {
             chessTimer.stop();
         }
@@ -826,16 +1176,66 @@ public class ChessGameActivity extends AppCompatActivity
 
         saveGameResult(isWhiteWinner, gameDuration);
 
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Игра окончена!")
-                .setMessage("ШАХ И МАТ!\nПобедили: " + (isWhiteWinner ? "Белые" : "Черные"))
-                .setPositiveButton("Новая игра", (dialog, which) -> restartGame())
-                .setNegativeButton("Выход", (dialog, which) -> finish())
-                .setCancelable(false)
-                .show();
+        if (isOnlineGame) {
+            updateGameSessionStatus("finished", isWhiteWinner);
+
+            new Handler().postDelayed(() -> {
+                FirebaseManager.getInstance().deleteGameSession(sessionId);
+            }, 30000);
+        }
+
+        runOnUiThread(() -> {
+            try {
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Игра окончена!")
+                        .setMessage("ШАХ И МАТ!\nПобедили: " + (isWhiteWinner ? "Белые" : "Черные"))
+                        .setPositiveButton("OK", (dialog, which) -> {
+                            if (isOnlineGame) {
+                                finish();
+                            } else {
+                                restartGame();
+                            }
+                        })
+                        .setCancelable(false)
+                        .setOnDismissListener(dialog -> {
+                            isGameFinished = true;
+                        })
+                        .show();
+            } catch (Exception e) {
+                Log.e("ChessGameActivity", "Error showing game over dialog: " + e.getMessage());
+            }
+        });
     }
 
-    private void saveGameResult(boolean isWhiteWinner, int durationSeconds) {
+    private void updateGameSessionStatus(String status, boolean isWhiteWinner) {
+        try {
+            String winnerId = null;
+            if (isWhiteWinner) {
+                winnerId = chessBoard.isWhiteTurn() ? currentUserId : getOpponentId();
+            } else {
+                winnerId = !chessBoard.isWhiteTurn() ? currentUserId : getOpponentId();
+            }
+
+            FirebaseManager.getInstance().updateGameSessionStatus(
+                    sessionId,
+                    status,
+                    winnerId,
+                    movesCount
+            );
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error updating game session status: " + e.getMessage());
+        }
+    }
+
+    private String getOpponentId() {
+        return "opponent_" + sessionId;
+    }
+
+    private void saveGameResult(boolean isWin, int durationSeconds) {
+        if (isGameFinished) {
+            Log.d("ChessGameActivity", "Game result already saved, ignoring duplicate");
+            return;
+        }
 
         DatabaseHelper dbHelper = new DatabaseHelper(this);
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
@@ -843,16 +1243,19 @@ public class ChessGameActivity extends AppCompatActivity
         User currentUser = dbHelper.getUser(userId);
 
         if (currentUser != null) {
+            String result = isWin ? "win" : "loss";
+            String color = isPlayerWhite ? "white" : "black";
+
             GameStat stat = new GameStat(
                     currentUser.getId(),
-                    isPlayerWhite == isWhiteWinner ? "win" : "loss",
-                    isPlayerWhite ? "white" : "black",
+                    result,
+                    color,
                     durationSeconds,
                     this.movesCount
             );
 
-
-            dbHelper.addGameStat(stat);
+            long statId = dbHelper.addGameStat(stat);
+            Log.d("ChessGameActivity", "Game result saved with ID: " + statId + " - " + result + " as " + color);
         }
     }
 
@@ -893,17 +1296,26 @@ public class ChessGameActivity extends AppCompatActivity
                         move.getFromRow() + "," + move.getFromCol() + " -> " +
                         move.getToRow() + "," + move.getToCol() + " Type: " + move.getMoveType());
 
-                chessBoard.setWhiteTurn(!chessBoard.isWhiteTurn());
-
                 clearAllSelection();
                 chessBoard.selectPiece(-1, -1);
 
-                applyMoveDirectly(move);
+                ChessPiece sourcePiece = chessBoard.getPiece(move.getFromRow(), move.getFromCol());
+                if (sourcePiece == null) {
+                    Log.e("ChessGameActivity", "No piece found at source, syncing board state");
+                    syncBoardWithServer();
+                    return;
+                }
 
-                updateBoard();
-                determineTurn();
-                updatePlayerTurn();
+                if (sourcePiece.isWhite() == isPlayerWhite) {
+                    Log.w("ChessGameActivity", "Trying to move own piece, ignoring");
+                    return;
+                }
 
+                if ("castling".equals(move.getMoveType())) {
+                    applyCastlingMove(move);
+                } else {
+                    applyStandardMove(move);
+                }
             } catch (Exception e) {
                 Log.e("ChessGameActivity", "Error applying opponent move", e);
             }
@@ -966,14 +1378,25 @@ public class ChessGameActivity extends AppCompatActivity
         try {
             ChessPiece king = chessBoard.getPiece(move.getFromRow(), move.getFromCol());
             if (king != null && king.getType() == ChessPiece.PieceType.KING) {
-                chessBoard.selectPiece(move.getFromRow(), move.getFromCol());
-                boolean moveSuccess = chessBoard.movePiece(move.getToRow(), move.getToCol());
+                int direction = move.getToCol() > move.getFromCol() ? 1 : -1;
+                int rookCol = direction == 1 ? 7 : 0;
+                int newRookCol = direction == 1 ? move.getToCol() - 1 : move.getToCol() + 1;
 
-                if (moveSuccess) {
-                    completeMoveApplication();
-                } else {
-                    applyMoveDirectly(move);
+                chessBoard.getBoard()[move.getFromRow()][move.getFromCol()] = null;
+                chessBoard.getBoard()[move.getToRow()][move.getToCol()] = king;
+                king.setPosition(move.getToRow(), move.getToCol());
+
+                ChessPiece rook = chessBoard.getPiece(move.getToRow(), rookCol);
+                if (rook != null && rook.getType() == ChessPiece.PieceType.ROOK) {
+                    chessBoard.getBoard()[move.getToRow()][rookCol] = null;
+                    chessBoard.getBoard()[move.getToRow()][newRookCol] = rook;
+                    rook.setPosition(move.getToRow(), newRookCol);
                 }
+
+                chessBoard.setWhiteTurn(!chessBoard.isWhiteTurn());
+                completeMoveApplication();
+
+                Log.d("ChessGameActivity", "Castling applied successfully");
             } else {
                 applyMoveDirectly(move);
             }
@@ -1079,6 +1502,7 @@ public class ChessGameActivity extends AppCompatActivity
         });
     }
 
+
     private void updateOnlineTurn() {
         isMyTurn = !isMyTurn;
         updateTurnIndicator();
@@ -1137,6 +1561,10 @@ public class ChessGameActivity extends AppCompatActivity
         if (isTimedGame && chessTimer != null) {
             chessTimer.resume();
         }
+
+        if (isOnlineGame) {
+            syncKingDisplay();
+        }
     }
 
     @Override
@@ -1150,11 +1578,234 @@ public class ChessGameActivity extends AppCompatActivity
             if (boardStateListener != null) {
                 FirebaseManager.getInstance().stopListeningForBoardState(sessionId, boardStateListener);
             }
+            if (abilityListener != null) {
+                FirebaseManager.getInstance().stopListeningForAbilityActivations(sessionId, abilityListener);
+            }
+            if (transformationListener != null) {
+                FirebaseManager.getInstance().stopListeningForPieceTransformations(sessionId, transformationListener);
+            }
+            if (dragonFireListener != null) {
+                FirebaseManager.getInstance().stopListeningForDragonFireShots(sessionId, dragonFireListener);
+            }
+            if (playerExitListener != null) {
+                FirebaseManager.getInstance().stopListeningForPlayerExit(sessionId, playerExitListener);
+            }
+        }
+
+        if (isOnlineGame && !isFinishing()) {
+            handlePlayerExit();
         }
 
         if (isTimedGame && chessTimer != null) {
             chessTimer.stop();
         }
+    }
+
+    private void handlePlayerExit() {
+        try {
+            Log.d("ChessGameActivity", "Player exiting online game - Session: " + sessionId);
+
+            sendPlayerLeftNotification();
+
+            FirebaseManager.getInstance().updateGameSessionStatus(
+                    sessionId,
+                    "abandoned",
+                    currentUserId,
+                    movesCount
+            );
+
+            saveGameResult(false, (int) ((System.currentTimeMillis() - gameStartTime) / 1000));
+
+            new Handler().postDelayed(() -> {
+                FirebaseManager.getInstance().deleteGameSession(sessionId);
+            }, 10000);
+
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error handling player exit: " + e.getMessage());
+        }
+    }
+
+    private void sendPlayerLeftNotification() {
+        try {
+            Map<String, Object> exitData = new HashMap<>();
+            exitData.put("playerId", currentUserId);
+            exitData.put("timestamp", System.currentTimeMillis());
+            exitData.put("action", "player_left");
+            exitData.put("playerName", getCurrentPlayerName()); // ✅ ДОБАВЛЯЕМ ИМЯ ИГРОКА
+
+            FirebaseManager.getInstance().sendPlayerExitNotification(sessionId, exitData);
+
+            Log.d("ChessGameActivity", "Exit notification sent for player: " + currentUserId);
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error sending exit notification: " + e.getMessage());
+        }
+    }
+
+    private String getCurrentPlayerName() {
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        int userId = prefs.getInt("currentUserId", -1);
+        User currentUser = dbHelper.getUser(userId);
+        return currentUser != null ? currentUser.getUsername() : "Игрок";
+    }
+
+    private void showExitConfirmationDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Выход из игры")
+                .setMessage("Вы уверены, что хотите выйти? Это засчитается как поражение.")
+                .setPositiveButton("Выйти", (dialog, which) -> {
+                    handlePlayerExit();
+                    finish();
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    private void setupPlayerExitListener() {
+        playerExitListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+
+                if (dataSnapshot.exists()) {
+                    Map<String, Object> exitData = (Map<String, Object>) dataSnapshot.getValue();
+                    if (exitData != null) {
+                        String playerId = (String) exitData.get("playerId");
+                        String action = (String) exitData.get("action");
+                        String playerName = (String) exitData.get("playerName");
+
+                        if (playerId != null && !playerId.equals(currentUserId) && "player_left".equals(action)) {
+                            runOnUiThread(() -> {
+                                if (!isFinishing() && !isDestroyed()) {
+                                    showOpponentLeftDialog(playerName);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Exit listener cancelled: " + databaseError.getMessage());
+            }
+        };
+
+        FirebaseManager.getInstance().listenForPlayerExit(sessionId, playerExitListener);
+    }
+
+    private void showOpponentLeftDialog(String opponentName) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+
+        try {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Противник вышел")
+                    .setMessage("Игрок " + opponentName + " покинул игру. Вам засчитана победа!")
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        saveGameResult(true, (int) ((System.currentTimeMillis() - gameStartTime) / 1000));
+
+                        FirebaseManager.getInstance().clearPlayerExitNotification(sessionId);
+
+                        finish();
+                    })
+                    .setCancelable(false)
+                    .setOnDismissListener(dialog -> {
+                        FirebaseManager.getInstance().clearPlayerExitNotification(sessionId);
+                    })
+                    .show();
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error showing opponent left dialog: " + e.getMessage());
+        }
+    }
+
+    private class AbilityListener implements ChildEventListener {
+        @Override
+        public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
+            try {
+                Map<String, Object> abilityData = (Map<String, Object>) dataSnapshot.getValue();
+                if (abilityData != null) {
+                    String playerId = (String) abilityData.get("playerId");
+                    String kingType = (String) abilityData.get("kingType");
+                    Boolean isWhiteTurn = (Boolean) abilityData.get("isWhiteTurn");
+
+                    if (playerId != null && !playerId.equals(currentUserId) && isWhiteTurn != null) {
+                        applyOpponentAbilityActivation(kingType, isWhiteTurn);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("ChessGameActivity", "Error processing ability activation", e);
+            }
+        }
+
+        @Override
+        public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
+
+        @Override
+        public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+        @Override
+        public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+            Log.e("ChessGameActivity", "Ability listener cancelled: " + databaseError.getMessage());
+        }
+    }
+
+    private class TransformationListener implements ChildEventListener {
+        @Override
+        public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
+            try {
+                Map<String, Object> transformData = (Map<String, Object>) dataSnapshot.getValue();
+                if (transformData != null) {
+                    String playerId = (String) transformData.get("playerId");
+                    Long rowLong = (Long) transformData.get("row");
+                    Long colLong = (Long) transformData.get("col");
+                    String newPieceType = (String) transformData.get("newPieceType");
+                    Boolean changeColor = (Boolean) transformData.get("changeColor");
+
+                    if (playerId != null && !playerId.equals(currentUserId) &&
+                            rowLong != null && colLong != null) {
+                        applyOpponentPieceTransformation(
+                                rowLong.intValue(),
+                                colLong.intValue(),
+                                newPieceType,
+                                changeColor != null ? changeColor : false
+                        );
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("ChessGameActivity", "Error processing piece transformation", e);
+            }
+        }
+
+        @Override
+        public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
+
+        @Override
+        public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+        @Override
+        public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+            Log.e("ChessGameActivity", "Transformation listener cancelled: " + databaseError.getMessage());
+        }
+    }
+
+    private void checkForCheckmate() {
+        if (isGameFinished) return;
+
+        new Handler().postDelayed(() -> {
+            if (!isGameFinished && chessBoard.isCheckmate(!chessBoard.isWhiteTurn())) {
+                showGameOverDialog(chessBoard.isWhiteTurn());
+            }
+        }, 100);
     }
 
 }

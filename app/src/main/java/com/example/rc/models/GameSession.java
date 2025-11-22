@@ -16,15 +16,17 @@ public class GameSession {
     private String currentFen;
     private boolean isWhiteTurn;
 
-    public GameSession() {
-    }
 
-    public GameSession(String sessionId) {
-        this.sessionId = sessionId;
+    public GameSession() {
         this.createdAt = System.currentTimeMillis();
         this.status = "active";
         this.currentFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         this.isWhiteTurn = true;
+    }
+
+    public GameSession(String sessionId) {
+        this();
+        this.sessionId = sessionId;
     }
 
     public String getSessionId() { return sessionId; }
@@ -69,7 +71,6 @@ public class GameSession {
     public boolean isWhiteTurn() { return isWhiteTurn; }
     public void setWhiteTurn(boolean whiteTurn) { isWhiteTurn = whiteTurn; }
 
-    // Вспомогательные методы
     public boolean isPlayerWhite(String playerId) {
         if (playerId == null) return false;
         if (playerId.equals(player1Id)) {

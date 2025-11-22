@@ -1,5 +1,7 @@
 package com.example.rc;
 
+import android.util.Log;
+
 import com.example.rc.models.ChessMove;
 import com.google.firebase.database.*;
 import com.example.rc.models.User;
@@ -76,9 +78,10 @@ public class FirebaseManager {
         sessionData.put("player1Color", session.getPlayer1Color());
         sessionData.put("player2Color", session.getPlayer2Color());
         sessionData.put("timeMinutes", session.getTimeMinutes());
-        sessionData.put("status", "matched");
-        sessionData.put("createdAt", System.currentTimeMillis());
-        sessionData.put("currentFen", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        sessionData.put("status", session.getStatus());
+        sessionData.put("createdAt", session.getCreatedAt());
+        sessionData.put("currentFen", session.getCurrentFen());
+        sessionData.put("isWhiteTurn", session.isWhiteTurn());
 
         database.child(GAME_SESSIONS_NODE).child(session.getSessionId()).setValue(sessionData, listener);
     }
@@ -204,14 +207,99 @@ public class FirebaseManager {
         database.child(GAME_SESSIONS_NODE).child(sessionId).child(MOVES_NODE).push().setValue(moveData);
     }
 
+    public void updateGameSessionStatus(String sessionId, String status, String loserId, int movesCount) {
+        Map<String, Object> updateData = new HashMap<>();
+        updateData.put("status", status);
+        updateData.put("loserId", loserId);
+        updateData.put("endTime", System.currentTimeMillis());
+        updateData.put("totalMoves", movesCount);
+        updateData.put("winnerId", getOpponentId(sessionId, loserId));
+
+        database.child(GAME_SESSIONS_NODE).child(sessionId).updateChildren(updateData)
+                .addOnSuccessListener(aVoid -> Log.d("FirebaseManager", "Game session status updated to: " + status))
+                .addOnFailureListener(e -> Log.e("FirebaseManager", "Failed to update game session status: " + e.getMessage()));
+    }
+
+    private String getOpponentId(String sessionId, String loserId) {
+        return "opponent_of_" + loserId;
+    }
+    public void clearSessionData(String sessionId) {
+        Map<String, Object> clearData = new HashMap<>();
+        clearData.put("playerExit", null);
+        clearData.put("abilityActivations", null);
+        clearData.put("pieceTransformations", null);
+        clearData.put("dragonFireShots", null);
+
+        database.child(GAME_SESSIONS_NODE).child(sessionId).updateChildren(clearData);
+    }
+
+    public void deleteGameSession(String sessionId) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).removeValue()
+                .addOnSuccessListener(aVoid -> Log.d("FirebaseManager", "Game session deleted: " + sessionId))
+                .addOnFailureListener(e -> Log.e("FirebaseManager", "Failed to delete game session: " + e.getMessage()));
+    }
+
+    public void sendPlayerExitNotification(String sessionId, Map<String, Object> exitData) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("playerExit").setValue(exitData);
+    }
+
+    public void listenForPlayerExit(String sessionId, ValueEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("playerExit").addValueEventListener(listener);
+    }
+
+    private long getSessionStartTime(String sessionId) {
+        return System.currentTimeMillis() - (10 * 60 * 1000);
+    }
+
+    public void sendAbilityActivation(String sessionId, Map<String, Object> abilityData) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("abilityActivations").push().setValue(abilityData);
+    }
+
+    public void sendPieceTransformation(String sessionId, Map<String, Object> transformData) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("pieceTransformations").push().setValue(transformData);
+    }
+
     public void stopListeningForMoves(String sessionId, ChildEventListener listener) {
         database.child(GAME_SESSIONS_NODE).child(sessionId).child(MOVES_NODE).removeEventListener(listener);
     }
 
+    public void listenForAbilityActivations(String sessionId, ChildEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("abilityActivations").addChildEventListener(listener);
+    }
+
+    public void listenForPieceTransformations(String sessionId, ChildEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("pieceTransformations").addChildEventListener(listener);
+    }
     public void stopListeningForBoardState(String sessionId, ValueEventListener listener) {
         database.child(GAME_SESSIONS_NODE).child(sessionId).removeEventListener(listener);
     }
 
+    public void sendDragonFireShot(String sessionId, Map<String, Object> fireData) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("dragonFireShots").push().setValue(fireData);
+    }
 
+    public void listenForDragonFireShots(String sessionId, ChildEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("dragonFireShots").addChildEventListener(listener);
+    }
+
+    public void clearPlayerExitNotification(String sessionId) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("playerExit").removeValue();
+    }
+
+    public void stopListeningForPlayerExit(String sessionId, ValueEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("playerExit").removeEventListener(listener);
+    }
+
+    public void stopListeningForAbilityActivations(String sessionId, ChildEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("abilityActivations").removeEventListener(listener);
+    }
+
+    public void stopListeningForPieceTransformations(String sessionId, ChildEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("pieceTransformations").removeEventListener(listener);
+    }
+
+    public void stopListeningForDragonFireShots(String sessionId, ChildEventListener listener) {
+        database.child(GAME_SESSIONS_NODE).child(sessionId).child("dragonFireShots").removeEventListener(listener);
+    }
 
 }

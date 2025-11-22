@@ -333,6 +333,10 @@ public class ChessBoard {
             return false;
         }
 
+        if (pawn.isWhite() != isWhiteTurn) {
+            return false;
+        }
+
         if ((pawn.isWhite() && elfAbilityUsedWhite) ||
                 (!pawn.isWhite() && elfAbilityUsedBlack)) {
             return false;

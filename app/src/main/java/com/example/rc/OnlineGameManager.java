@@ -117,10 +117,8 @@ public class OnlineGameManager {
             return false;
         }
 
-        if (!"random".equals(preferredColor) && !"random".equals(opponent.color)) {
-            if (preferredColor.equals(opponent.color)) {
-                return false;
-            }
+        if (preferredColor.equals(opponent.color)) {
+            return false;
         }
 
         return true;
@@ -132,7 +130,7 @@ public class OnlineGameManager {
         String player2Color = player1Color.equals("white") ? "black" : "white";
 
         String sessionId = generateSessionId(currentUser, opponent, timeMinutes);
-
+        clearOldSessionData(sessionId);
         GameSession session = new GameSession(sessionId);
 
         session.setPlayer1Id(currentUser.getOnlineId());
@@ -180,7 +178,7 @@ public class OnlineGameManager {
         if ("black".equals(color1)) return "black";
         if ("black".equals(color2)) return "white";
 
-        return new Random().nextBoolean() ? "white" : "black";
+        return "white";
     }
 
     public void cancelMatchmaking(User user) {
@@ -267,6 +265,10 @@ public class OnlineGameManager {
 
     interface SessionExistsCallback {
         void onResult(boolean sessionExists);
+    }
+
+    private void clearOldSessionData(String sessionId) {
+        FirebaseManager.getInstance().clearSessionData(sessionId);
     }
 
 }

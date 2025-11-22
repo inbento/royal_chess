@@ -1,12 +1,14 @@
 package com.example.rc.chess;
 
-import android.os.CountDownTimer;
-import android.widget.TextView;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 
 public class ChessTimer {
-    private CountDownTimer whiteTimer;
-    private CountDownTimer blackTimer;
+    private Handler handler;
+    private Runnable timerRunnable;
     private long whiteTimeLeft;
     private long blackTimeLeft;
     private boolean isWhiteTurn;
@@ -15,6 +17,7 @@ public class ChessTimer {
     private TimerListener listener;
     private boolean isRunning = false;
     private boolean isPaused = false;
+    private long lastUpdateTime;
 
     public interface TimerListener {
         void onTimeOut(boolean isWhite);
@@ -32,8 +35,53 @@ public class ChessTimer {
         this.listener = listener;
         this.isWhiteTurn = true;
 
+        this.handler = new Handler(Looper.getMainLooper());
+
+        initTimerRunnable();
         updateTimerDisplays();
         updateIndicators();
+    }
+
+    private void initTimerRunnable() {
+        timerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (!isRunning || isPaused) return;
+
+                long currentTime = System.currentTimeMillis();
+                long elapsed = currentTime - lastUpdateTime;
+                lastUpdateTime = currentTime;
+
+                if (isWhiteTurn) {
+                    if (whiteTimeLeft > 0) {
+                        whiteTimeLeft = Math.max(0, whiteTimeLeft - elapsed);
+                        updateTimerDisplays();
+
+                        if (whiteTimeLeft <= 0) {
+                            handleTimeOut(true);
+                            return;
+                        }
+                    }
+                } else {
+                    if (blackTimeLeft > 0) {
+                        blackTimeLeft = Math.max(0, blackTimeLeft - elapsed);
+                        updateTimerDisplays();
+
+                        if (blackTimeLeft <= 0) {
+                            handleTimeOut(false);
+                            return;
+                        }
+                    }
+                }
+
+                if (listener != null) {
+                    listener.onTimeUpdate(whiteTimeLeft, blackTimeLeft);
+                }
+
+                // Планируем следующее обновление
+                handler.postDelayed(this, 100);
+            }
+        };
     }
 
     public void start() {
@@ -41,13 +89,14 @@ public class ChessTimer {
 
         isRunning = true;
         isPaused = false;
+        lastUpdateTime = System.currentTimeMillis();
 
-        if (isWhiteTurn) {
-            startWhiteTimer();
-        } else {
-            startBlackTimer();
-        }
+        handler.removeCallbacks(timerRunnable); // Убедимся что старый удален
+        handler.post(timerRunnable);
+
         updateIndicators();
+
+        Log.d("ChessTimer", "Timer started - White: " + whiteTimeLeft + "ms, Black: " + blackTimeLeft + "ms");
     }
 
     public void switchTurn() {
@@ -57,119 +106,65 @@ public class ChessTimer {
         }
 
         // Останавливаем текущий таймер
-        if (whiteTimer != null) {
-            whiteTimer.cancel();
-        }
-        if (blackTimer != null) {
-            blackTimer.cancel();
-        }
+        handler.removeCallbacks(timerRunnable);
 
+        // Переключаем ход
         isWhiteTurn = !isWhiteTurn;
+        lastUpdateTime = System.currentTimeMillis();
 
-        // Запускаем таймер для нового игрока
-        if (isWhiteTurn) {
-            startWhiteTimer();
-        } else {
-            startBlackTimer();
-        }
+        // Запускаем снова
+        handler.post(timerRunnable);
 
         updateIndicators();
+
+        Log.d("ChessTimer", "Turn switched to: " + (isWhiteTurn ? "White" : "Black"));
     }
 
-    private void startWhiteTimer() {
-        if (whiteTimeLeft <= 0) {
-            if (listener != null) {
-                listener.onTimeOut(true);
-            }
-            return;
+    private void handleTimeOut(boolean isWhite) {
+        isRunning = false;
+        handler.removeCallbacks(timerRunnable);
+
+        if (isWhite) {
+            whiteTimeLeft = 0;
+        } else {
+            blackTimeLeft = 0;
         }
 
-        whiteTimer = new CountDownTimer(whiteTimeLeft, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                whiteTimeLeft = millisUntilFinished;
-                updateTimerDisplays();
-                if (listener != null) {
-                    listener.onTimeUpdate(whiteTimeLeft, blackTimeLeft);
-                }
-            }
+        updateTimerDisplays();
+        updateIndicators();
 
-            @Override
-            public void onFinish() {
-                whiteTimeLeft = 0;
-                updateTimerDisplays();
-                isRunning = false;
-                if (listener != null) {
-                    listener.onTimeOut(true);
-                }
-            }
-        }.start();
-    }
+        Log.d("ChessTimer", "Time out for: " + (isWhite ? "White" : "Black"));
 
-    private void startBlackTimer() {
-        if (blackTimeLeft <= 0) {
-            if (listener != null) {
-                listener.onTimeOut(false);
-            }
-            return;
+        if (listener != null) {
+            listener.onTimeOut(isWhite);
         }
-
-        blackTimer = new CountDownTimer(blackTimeLeft, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                blackTimeLeft = millisUntilFinished;
-                updateTimerDisplays();
-                if (listener != null) {
-                    listener.onTimeUpdate(whiteTimeLeft, blackTimeLeft);
-                }
-            }
-
-            @Override
-            public void onFinish() {
-                blackTimeLeft = 0;
-                updateTimerDisplays();
-                isRunning = false;
-                if (listener != null) {
-                    listener.onTimeOut(false);
-                }
-            }
-        }.start();
     }
 
     public void pause() {
-        if (!isRunning) return;
+        if (!isRunning || isPaused) return;
 
         isPaused = true;
-        if (whiteTimer != null) {
-            whiteTimer.cancel();
-        }
-        if (blackTimer != null) {
-            blackTimer.cancel();
-        }
+        handler.removeCallbacks(timerRunnable);
+
+        Log.d("ChessTimer", "Timer paused");
     }
 
     public void resume() {
-        if (!isPaused || !isRunning) return;
+        if (!isRunning || !isPaused) return;
 
         isPaused = false;
-        if (isWhiteTurn) {
-            startWhiteTimer();
-        } else {
-            startBlackTimer();
-        }
+        lastUpdateTime = System.currentTimeMillis();
+        handler.post(timerRunnable);
+
+        Log.d("ChessTimer", "Timer resumed");
     }
 
     public void stop() {
         isRunning = false;
         isPaused = false;
-        if (whiteTimer != null) {
-            whiteTimer.cancel();
-            whiteTimer = null;
-        }
-        if (blackTimer != null) {
-            blackTimer.cancel();
-            blackTimer = null;
-        }
+        handler.removeCallbacks(timerRunnable);
+
+        Log.d("ChessTimer", "Timer stopped");
     }
 
     public void reset(long initialTimeMillis) {
@@ -181,6 +176,8 @@ public class ChessTimer {
         isPaused = false;
         updateTimerDisplays();
         updateIndicators();
+
+        Log.d("ChessTimer", "Timer reset");
     }
 
     private void updateTimerDisplays() {
