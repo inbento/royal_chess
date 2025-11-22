@@ -39,6 +39,14 @@ public class ChessBoard {
         initializeBoard();
     }
 
+    public ChessPiece[][] getBoard() {
+        return board;
+    }
+
+    public void setWhiteTurn(boolean whiteTurn) {
+        this.isWhiteTurn = whiteTurn;
+    }
+
     private void initializeBoard() {
         board[0][0] = new Rook(false, 0, 0);
         board[0][1] = new Knight(false, 0, 1);

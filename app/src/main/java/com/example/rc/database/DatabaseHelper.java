@@ -121,6 +121,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)));
             user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD)));
             user.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CREATED_AT)));
+
+            int onlineIdIndex = cursor.getColumnIndex(COLUMN_ONLINE_ID);
+            if (onlineIdIndex >= 0) {
+                user.setOnlineId(cursor.getString(onlineIdIndex));
+            }
+
             cursor.close();
             return user;
         }

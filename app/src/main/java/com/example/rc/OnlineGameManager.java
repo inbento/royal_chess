@@ -9,6 +9,7 @@ import com.example.rc.models.GameSession;
 import com.example.rc.FirebaseManager.MatchmakingRequest;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -95,7 +96,16 @@ public class OnlineGameManager {
 
         for (MatchmakingRequest opponent : opponents) {
             if (isCompatibleMatch(currentUser, opponent, preferredColor, timeMinutes)) {
-                createGameSession(currentUser, opponent, preferredColor, timeMinutes, king);
+                String potentialSessionId = generateSessionId(currentUser, opponent, timeMinutes);
+
+                checkIfSessionExists(potentialSessionId, (sessionExists) -> {
+                    if (sessionExists) {
+                        connectToExistingSession(potentialSessionId, currentUser);
+                    } else {
+                        // Создаем новую сессию
+                        createGameSession(currentUser, opponent, preferredColor, timeMinutes, king);
+                    }
+                });
                 break;
             }
         }
@@ -121,7 +131,7 @@ public class OnlineGameManager {
         String player1Color = determineColors(preferredColor, opponent.color);
         String player2Color = player1Color.equals("white") ? "black" : "white";
 
-        String sessionId = "session_" + System.currentTimeMillis() + "_" + new Random().nextInt(1000);
+        String sessionId = generateSessionId(currentUser, opponent, timeMinutes);
 
         GameSession session = new GameSession(sessionId);
 
@@ -201,6 +211,62 @@ public class OnlineGameManager {
             case "Гномы": return "gnome";
             default: return "human";
         }
+    }
+
+    private String generateSessionId(User player1, MatchmakingRequest player2, int timeMinutes) {
+        String[] ids = {player1.getOnlineId(), player2.userId};
+        Arrays.sort(ids);
+        return "session_" + ids[0] + "_" + ids[1] + "_" + timeMinutes;
+    }
+
+    private void checkIfSessionExists(String sessionId, SessionExistsCallback callback) {
+        FirebaseManager.getInstance().getGameSession(sessionId, new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                callback.onResult(dataSnapshot.exists());
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                callback.onResult(false);
+            }
+        });
+    }
+
+    private void connectToExistingSession(String sessionId, User currentUser) {
+        FirebaseManager.getInstance().getGameSession(sessionId, new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    GameSession session = new GameSession();
+                    session.setSessionId(dataSnapshot.child("sessionId").getValue(String.class));
+                    session.setPlayer1Id(dataSnapshot.child("player1Id").getValue(String.class));
+                    session.setPlayer2Id(dataSnapshot.child("player2Id").getValue(String.class));
+                    session.setPlayer1Username(dataSnapshot.child("player1Username").getValue(String.class));
+                    session.setPlayer2Username(dataSnapshot.child("player2Username").getValue(String.class));
+                    session.setPlayer1KingType(dataSnapshot.child("player1KingType").getValue(String.class));
+                    session.setPlayer2KingType(dataSnapshot.child("player2KingType").getValue(String.class));
+                    session.setPlayer1Color(dataSnapshot.child("player1Color").getValue(String.class));
+                    session.setPlayer2Color(dataSnapshot.child("player2Color").getValue(String.class));
+                    session.setTimeMinutes(dataSnapshot.child("timeMinutes").getValue(Integer.class));
+
+                    if (session != null && userMatchmakingListener != null) {
+                        firebaseManager.removeFromMatchmaking(currentMatchmakingId);
+                        userMatchmakingListener.onMatchFound(session);
+                        stopMatchmaking();
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("OnlineGameManager", "Error connecting to existing session: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    interface SessionExistsCallback {
+        void onResult(boolean sessionExists);
     }
 
 }

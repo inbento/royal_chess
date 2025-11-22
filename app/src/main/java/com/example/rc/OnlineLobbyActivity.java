@@ -108,7 +108,6 @@ public class OnlineLobbyActivity extends AppCompatActivity {
         King selectedKing = (King) spinnerKing.getSelectedItem();
         String kingType = getKingTypeFromName(selectedKing.getName());
 
-        // Сохраняем выбранного короля для текущего пользователя
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         prefs.edit().putString("selected_king_type", kingType).apply();
 
@@ -124,9 +123,9 @@ public class OnlineLobbyActivity extends AppCompatActivity {
                     @Override
                     public void onMatchFound(GameSession session) {
                         runOnUiThread(() -> {
-                            String opponentUsername = session.getOpponentUsername();
-                            String opponentKingType = session.getOpponentKingType();
-                            boolean isPlayerWhite = session.isPlayerWhite();
+                            String opponentUsername = session.getOpponentUsername(currentUser.getOnlineId());
+                            String opponentKingType = session.getOpponentKingType(currentUser.getOnlineId());
+                            boolean isPlayerWhite = session.isPlayerWhite(currentUser.getOnlineId());
 
                             Log.d("OnlineLobby", "Match found - Session: " + session.getSessionId() +
                                     "\nOpponent: " + opponentUsername +
@@ -134,15 +133,19 @@ public class OnlineLobbyActivity extends AppCompatActivity {
                                     "\nIs White: " + isPlayerWhite +
                                     "\nTime: " + session.getTimeMinutes() + " minutes");
 
+                            if (session.getSessionId() == null) {
+                                Log.e("OnlineLobby", "Session ID is null!");
+                                return;
+                            }
+
                             Intent intent = new Intent(OnlineLobbyActivity.this, ChessGameActivity.class);
                             intent.putExtra("session_id", session.getSessionId());
                             intent.putExtra("is_online_game", true);
                             intent.putExtra("player_color_white", isPlayerWhite);
                             intent.putExtra("opponent_username", opponentUsername);
                             intent.putExtra("opponent_king_type", opponentKingType);
-                            intent.putExtra("game_time_minutes", session.getTimeMinutes());
                             intent.putExtra("game_time_seconds", session.getTimeMinutes() * 60);
-                            intent.putExtra("is_timed_game", session.getTimeMinutes() > 0);
+                            intent.putExtra("is_timed_game", true);
 
                             startActivity(intent);
                             finish();

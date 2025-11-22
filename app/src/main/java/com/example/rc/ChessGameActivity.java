@@ -22,11 +22,18 @@ import com.example.rc.chess.ChessBoard;
 import com.example.rc.chess.ChessPiece;
 import com.example.rc.chess.ChessTimer;
 import com.example.rc.database.DatabaseHelper;
+import com.example.rc.models.ChessMove;
 import com.example.rc.models.GameStat;
 import com.example.rc.models.User;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ChessGameActivity extends AppCompatActivity
         implements PromotionAdapter.OnPromotionPieceSelected, ChessTimer.TimerListener {
@@ -37,7 +44,6 @@ public class ChessGameActivity extends AppCompatActivity
     private Button btnBack, btnRestart;
     private boolean isPlayerWhite;
     private ChessSquare[][] squares = new ChessSquare[8][8];
-
     private RecyclerView rvPromotion;
     private PromotionAdapter promotionAdapter;
     private List<String> moves = new ArrayList<>();
@@ -60,6 +66,13 @@ public class ChessGameActivity extends AppCompatActivity
     private boolean isOnlineGame = false;
     private String opponentUsername = "Оппонент";
     private TextView tvPlayerName, tvOpponentName;
+    private String sessionId;
+    private String currentUserId;
+    private ChildEventListener movesListener;
+    private ValueEventListener boardStateListener;
+    private boolean isMyTurn = false;
+    private int promotionFromRow = -1;
+    private int promotionFromCol = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +86,15 @@ public class ChessGameActivity extends AppCompatActivity
             isTimedGame = extras.getBoolean("is_timed_game", true);
             isOnlineGame = extras.getBoolean("is_online_game", false);
 
+            if (extras.containsKey("session_id")) {
+                isOnlineGame = true;
+                sessionId = extras.getString("session_id");
+                opponentUsername = extras.getString("opponent_username", "Соперник");
+                opponentKingType = extras.getString("opponent_king_type", "human");
+
+                Log.d("ChessGameActivity", "Online game detected - Session: " + sessionId);
+            }
+
             Log.d("ChessGameActivity", "Timer settings - isTimedGame: " + isTimedGame +
                     ", gameTimeSeconds: " + gameTimeSeconds);
             Log.d("ChessGameActivity", "Intent extras received:");
@@ -81,15 +103,18 @@ public class ChessGameActivity extends AppCompatActivity
             }
 
             if (isOnlineGame) {
-                opponentUsername = extras.getString("opponent_username", "Оппонент");
+                sessionId = extras.getString("session_id");
+                opponentUsername = extras.getString("opponent_username", "Соперник");
                 opponentKingType = extras.getString("opponent_king_type", "human");
-                Log.d("ChessGameActivity", "Online game data - isPlayerWhite: " + isPlayerWhite +
-                        ", opponent: " + opponentUsername + ", opponentKing: " + opponentKingType);
-            } else {
-                String whiteKingTypeFromIntent = extras.getString("white_king_type", "human");
-                String blackKingTypeFromIntent = extras.getString("black_king_type", "human");
-                Log.d("ChessGameActivity", "White king from intent: " + whiteKingTypeFromIntent);
-                Log.d("ChessGameActivity", "Black king from intent: " + blackKingTypeFromIntent);
+
+                DatabaseHelper dbHelper = new DatabaseHelper(this);
+                SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                int userId = prefs.getInt("currentUserId", -1);
+                User currentUser = dbHelper.getUser(userId);
+                currentUserId = currentUser != null ? currentUser.getOnlineId() : "unknown";
+                new android.os.Handler().postDelayed(() -> {
+                    syncTurnWithServer();
+                }, 1000);
             }
         }
 
@@ -121,6 +146,9 @@ public class ChessGameActivity extends AppCompatActivity
         updatePlayerTurn();
         loadSelectedKing();
         initKingView();
+        if (isOnlineGame) {
+            setupOnlineGame();
+        }
     }
 
     private void initViews() {
@@ -157,6 +185,120 @@ public class ChessGameActivity extends AppCompatActivity
 
         ivOpponentKing.setOnClickListener(v -> {
             activateKingAbility();
+        });
+    }
+
+    private void setupOnlineGame() {
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        int userId = prefs.getInt("currentUserId", -1);
+        User currentUser = dbHelper.getUser(userId);
+
+        if (currentUser != null) {
+            currentUserId = dbHelper.getUserOnlineId(userId);
+            Log.d("ChessGameActivity", "Current user online ID: " + currentUserId);
+        }
+
+        if (currentUserId == null) {
+            Log.e("ChessGameActivity", "Failed to get current user online ID");
+            currentUserId = "unknown_" + System.currentTimeMillis();
+        }
+
+        // Добавляем логирование sessionId
+        Log.d("ChessGameActivity", "Connecting to session: " + sessionId);
+
+        setupBoardStateListener();
+        setupMovesListener();
+        determineTurn();
+    }
+
+    private void setupBoardStateListener() {
+        boardStateListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Boolean isWhiteTurn = dataSnapshot.child("isWhiteTurn").getValue(Boolean.class);
+                    if (isWhiteTurn != null) {
+                        syncBoardState(isWhiteTurn);
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Board state listener cancelled: " + databaseError.getMessage());
+            }
+        };
+
+        FirebaseManager.getInstance().listenForBoardState(sessionId, boardStateListener);
+    }
+
+    private void setupMovesListener() {
+        movesListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
+                try {
+                    Log.d("ChessGameActivity", "onChildAdded: " + dataSnapshot.getKey());
+                    ChessMove move = dataSnapshot.getValue(ChessMove.class);
+                    if (move != null) {
+                        String movePlayerId = move.getPlayerId();
+                        Log.d("ChessGameActivity", "Processing move from player: " + movePlayerId + ", my ID: " + currentUserId);
+
+                        if (movePlayerId != null && !movePlayerId.equals(currentUserId)) {
+                            applyOpponentMove(move);
+                        } else if (movePlayerId == null) {
+                            Log.w("ChessGameActivity", "Received move with null playerId");
+                        }
+                    } else {
+                        Log.w("ChessGameActivity", "Received null move data");
+                    }
+                } catch (Exception e) {
+                    Log.e("ChessGameActivity", "Error in onChildAdded", e);
+                }
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Moves listener cancelled: " + databaseError.getMessage());
+            }
+        };
+
+        FirebaseManager.getInstance().listenForMoves(sessionId, movesListener);
+    }
+
+    private void determineTurn() {
+        if (isOnlineGame) {
+            boolean isWhiteTurn = chessBoard.isWhiteTurn();
+            isMyTurn = (isPlayerWhite && isWhiteTurn) || (!isPlayerWhite && !isWhiteTurn);
+
+            Log.d("ChessGameActivity", "Online turn - " +
+                    "isPlayerWhite: " + isPlayerWhite +
+                    ", boardWhiteTurn: " + isWhiteTurn +
+                    ", isMyTurn: " + isMyTurn);
+        } else {
+            isMyTurn = (isPlayerWhite && chessBoard.isWhiteTurn()) ||
+                    (!isPlayerWhite && !chessBoard.isWhiteTurn());
+        }
+    }
+
+    private void updateTurnIndicator() {
+        runOnUiThread(() -> {
+            if (isMyTurn) {
+                tvCurrentPlayer.setText("Ваш ход");
+                tvCurrentPlayer.setTextColor(Color.GREEN);
+            } else {
+                tvCurrentPlayer.setText("Ход противника");
+                tvCurrentPlayer.setTextColor(Color.RED);
+            }
         });
     }
 
@@ -322,14 +464,18 @@ public class ChessGameActivity extends AppCompatActivity
     private void activateKingAbility() {
         if (chessBoard != null) {
             String currentKingType;
-            boolean isWhiteKingClicked = false;
-
             if (chessBoard.isWhiteTurn()) {
                 currentKingType = playerKingType;
-                isWhiteKingClicked = true;
             } else {
                 currentKingType = opponentKingType;
-                isWhiteKingClicked = false;
+            }
+
+            if (isOnlineGame) {
+                if ((chessBoard.isWhiteTurn() && !isPlayerWhite) ||
+                        (!chessBoard.isWhiteTurn() && isPlayerWhite)) {
+                    Toast.makeText(this, "Сейчас не ваш ход для активации способности", Toast.LENGTH_SHORT).show();
+                    return;
+                }
             }
 
             chessBoard.activateKingAbility(currentKingType);
@@ -352,9 +498,8 @@ public class ChessGameActivity extends AppCompatActivity
 
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
 
-            if (chessBoard.getSelectedPiece() != null) {
-                chessBoard.selectPiece(chessBoard.getSelectedPiece().getRow(),
-                        chessBoard.getSelectedPiece().getCol());
+            if (hasSelectedPiece()) {
+                chessBoard.selectPiece(getSelectedPieceRow(), getSelectedPieceCol());
                 updateBoard();
                 highlightPossibleMoves();
             }
@@ -449,6 +594,11 @@ public class ChessGameActivity extends AppCompatActivity
             return;
         }
 
+        if (isOnlineGame && !isMyTurn) {
+            Toast.makeText(this, "Сейчас не ваш ход", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (chessBoard.isElfAbilityAvailable() && chessBoard.isElfAbilityActive()) {
             boolean success = chessBoard.activateElfAbility(row, col);
             if (success) {
@@ -473,7 +623,7 @@ public class ChessGameActivity extends AppCompatActivity
         if (chessBoard.isDragonFireShotAvailable() && chessBoard.isDragonAbilityActive() &&
                 chessBoard.getSelectedPiece() != null) {
             ChessPiece selected = chessBoard.getSelectedPiece();
-            if (selected.getType() == ChessPiece.PieceType.PAWN) {
+            if (selected != null && selected.getType() == ChessPiece.PieceType.PAWN) {
                 boolean success = chessBoard.activateDragonFireShot(
                         selected.getRow(), selected.getCol(), row, col);
                 if (success) {
@@ -488,21 +638,41 @@ public class ChessGameActivity extends AppCompatActivity
 
         ChessPiece piece = chessBoard.getPiece(row, col);
 
-        if (chessBoard.getSelectedPiece() != null) {
+        ChessPiece selectedPiece = chessBoard.getSelectedPiece();
+        if (selectedPiece != null) {
+            int fromRow = selectedPiece.getRow();
+            int fromCol = selectedPiece.getCol();
+            String moveType = "normal";
+
             if (chessBoard.movePiece(row, col)) {
                 movesCount++;
+
+                ChessPiece currentSelectedPiece = chessBoard.getSelectedPiece();
+                if (currentSelectedPiece != null && currentSelectedPiece.getType() == ChessPiece.PieceType.KING &&
+                        Math.abs(col - fromCol) == 2) {
+                    moveType = "castling";
+                }
+
                 if (isTimedGame && chessTimer != null) {
                     chessTimer.switchTurn();
                 }
 
                 if (isPawnPromotion(row, col)) {
+                    promotionFromRow = fromRow;
+                    promotionFromCol = fromCol;
+
                     if (isTimedGame && chessTimer != null) {
                         chessTimer.pause();
                     }
                     showPromotionDialog(row, col);
                 } else {
+                    if (isOnlineGame) {
+                        sendMoveToOpponent(fromRow, fromCol, row, col, -1, moveType);
+                    }
+
                     updateBoard();
                     updatePlayerTurn();
+                    updateOnlineTurn();
 
                     if (chessBoard.isCheckmate(!chessBoard.isWhiteTurn())) {
                         showGameOverDialog(chessBoard.isWhiteTurn());
@@ -573,11 +743,20 @@ public class ChessGameActivity extends AppCompatActivity
             }
 
             updatePlayerTurn();
+
+            if (isOnlineGame) {
+                sendMoveToOpponent(promotionFromRow, promotionFromCol, promotionRow, promotionCol, pieceType, "promotion");
+                updateOnlineTurn();
+            }
+
             hidePromotionDialog();
 
             if (chessBoard.isCheckmate(!chessBoard.isWhiteTurn())) {
                 showGameOverDialog(chessBoard.isWhiteTurn());
             }
+
+            promotionFromRow = -1;
+            promotionFromCol = -1;
         }
     }
 
@@ -677,6 +856,252 @@ public class ChessGameActivity extends AppCompatActivity
         }
     }
 
+    private void sendMoveToOpponent(int fromRow, int fromCol, int toRow, int toCol, int promotionType, String moveType) {
+        try {
+            if (currentUserId == null) {
+                DatabaseHelper dbHelper = new DatabaseHelper(this);
+                SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                int userId = prefs.getInt("currentUserId", -1);
+                User currentUser = dbHelper.getUser(userId);
+                currentUserId = currentUser != null ? dbHelper.getUserOnlineId(userId) : "unknown";
+            }
+
+            String safeMoveType = moveType != null ? moveType : "normal";
+            ChessMove move = new ChessMove(currentUserId, fromRow, fromCol, toRow, toCol, promotionType, safeMoveType);
+
+            Log.d("ChessGameActivity", "Sending move to opponent: " +
+                    fromRow + "," + fromCol + " -> " + toRow + "," + toCol +
+                    " Promotion: " + promotionType + " Type: " + safeMoveType +
+                    " PlayerID: " + currentUserId);
+
+            FirebaseManager.getInstance().sendMove(sessionId, move);
+
+            FirebaseManager.getInstance().updateBoardState(sessionId,
+                    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    chessBoard.isWhiteTurn());
+
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error sending move to opponent: " + e.getMessage());
+            Toast.makeText(this, "Ошибка отправки хода", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void applyOpponentMove(ChessMove move) {
+        runOnUiThread(() -> {
+            try {
+                Log.d("ChessGameActivity", "Applying opponent move: " +
+                        move.getFromRow() + "," + move.getFromCol() + " -> " +
+                        move.getToRow() + "," + move.getToCol() + " Type: " + move.getMoveType());
+
+                chessBoard.setWhiteTurn(!chessBoard.isWhiteTurn());
+
+                clearAllSelection();
+                chessBoard.selectPiece(-1, -1);
+
+                applyMoveDirectly(move);
+
+                updateBoard();
+                determineTurn();
+                updatePlayerTurn();
+
+            } catch (Exception e) {
+                Log.e("ChessGameActivity", "Error applying opponent move", e);
+            }
+        });
+    }
+
+    private void applyStandardMove(ChessMove move) {
+        boolean selectionSuccess = chessBoard.selectPiece(move.getFromRow(), move.getFromCol());
+
+        if (selectionSuccess && hasSelectedPiece()) {
+            boolean moveSuccess = chessBoard.movePiece(move.getToRow(), move.getToCol());
+
+            if (moveSuccess) {
+                if (move.getPromotionType() != -1) {
+                    chessBoard.promotePawn(move.getToRow(), move.getToCol(), move.getPromotionType());
+                    Log.d("ChessGameActivity", "Applied pawn promotion to type: " + move.getPromotionType());
+                }
+
+                completeMoveApplication();
+            } else {
+                Log.e("ChessGameActivity", "Failed to apply opponent move - invalid move");
+                applyMoveDirectly(move);
+            }
+        } else {
+            Log.e("ChessGameActivity", "Failed to select opponent piece");
+            applyMoveDirectly(move);
+        }
+    }
+
+    private void applyMoveDirectly(ChessMove move) {
+        try {
+            ChessPiece piece = chessBoard.getPiece(move.getFromRow(), move.getFromCol());
+            if (piece != null) {
+                ChessPiece targetPiece = chessBoard.getPiece(move.getToRow(), move.getToCol());
+
+                piece.setPosition(move.getToRow(), move.getToCol());
+                chessBoard.getBoard()[move.getFromRow()][move.getFromCol()] = null;
+                chessBoard.getBoard()[move.getToRow()][move.getToCol()] = piece;
+
+                if (move.getPromotionType() != -1) {
+                    chessBoard.promotePawn(move.getToRow(), move.getToCol(), move.getPromotionType());
+                }
+
+                chessBoard.setWhiteTurn(!chessBoard.isWhiteTurn());
+
+                updateBoard();
+                updatePlayerTurn();
+                updateOnlineTurn();
+
+                Log.d("ChessGameActivity", "Move applied directly");
+            } else {
+                Log.e("ChessGameActivity", "No piece to move in applyMoveDirectly");
+            }
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error applying move directly: " + e.getMessage());
+        }
+    }
+
+    private void applyCastlingMove(ChessMove move) {
+        try {
+            ChessPiece king = chessBoard.getPiece(move.getFromRow(), move.getFromCol());
+            if (king != null && king.getType() == ChessPiece.PieceType.KING) {
+                chessBoard.selectPiece(move.getFromRow(), move.getFromCol());
+                boolean moveSuccess = chessBoard.movePiece(move.getToRow(), move.getToCol());
+
+                if (moveSuccess) {
+                    completeMoveApplication();
+                } else {
+                    applyMoveDirectly(move);
+                }
+            } else {
+                applyMoveDirectly(move);
+            }
+        } catch (Exception e) {
+            Log.e("ChessGameActivity", "Error applying castling: " + e.getMessage());
+            applyMoveDirectly(move);
+        }
+    }
+
+    private void completeMoveApplication() {
+        updateBoard();
+
+        if (isTimedGame && chessTimer != null) {
+            chessTimer.switchTurn();
+        }
+
+        updatePlayerTurn();
+
+        updateOnlineTurn();
+
+        if (chessBoard.isCheckmate(!chessBoard.isWhiteTurn())) {
+            showGameOverDialog(chessBoard.isWhiteTurn());
+        }
+
+        Log.d("ChessGameActivity", "Opponent move applied successfully");
+    }
+
+    private void syncBoardState(boolean isWhiteTurn) {
+        runOnUiThread(() -> {
+            Log.d("ChessGameActivity", "Syncing board state - Server turn: " + isWhiteTurn +
+                    ", Local turn: " + chessBoard.isWhiteTurn());
+
+            if (chessBoard.isWhiteTurn() != isWhiteTurn) {
+                chessBoard.setWhiteTurn(isWhiteTurn);
+                Log.d("ChessGameActivity", "Turn synchronized to: " + (isWhiteTurn ? "White" : "Black"));
+            }
+
+            determineTurn();
+
+            updatePlayerTurn();
+        });
+    }
+
+    private void syncBoardWithServer() {
+        Log.d("ChessGameActivity", "Syncing board with server state");
+
+        chessBoard = new ChessBoard();
+        updateBoard();
+
+        FirebaseManager.getInstance().getGameSession(sessionId, new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Boolean isWhiteTurn = dataSnapshot.child("isWhiteTurn").getValue(Boolean.class);
+                    if (isWhiteTurn != null) {
+                        syncBoardState(isWhiteTurn);
+                    }
+
+                    applyAllMovesFromHistory(dataSnapshot);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Failed to sync board: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    private void applyAllMovesFromHistory(DataSnapshot sessionSnapshot) {
+        DataSnapshot movesSnapshot = sessionSnapshot.child("moves");
+        for (DataSnapshot moveSnapshot : movesSnapshot.getChildren()) {
+            ChessMove move = moveSnapshot.getValue(ChessMove.class);
+            if (move != null && !move.getPlayerId().equals(currentUserId)) {
+                applyMoveDirectly(move);
+            }
+        }
+    }
+
+    private void syncTurnWithServer() {
+        if (!isOnlineGame) return;
+
+        FirebaseManager.getInstance().getGameSession(sessionId, new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Boolean serverWhiteTurn = dataSnapshot.child("isWhiteTurn").getValue(Boolean.class);
+                    if (serverWhiteTurn != null && chessBoard.isWhiteTurn() != serverWhiteTurn) {
+                        runOnUiThread(() -> {
+                            chessBoard.setWhiteTurn(serverWhiteTurn);
+                            determineTurn();
+                            updatePlayerTurn();
+                            updateBoard();
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChessGameActivity", "Failed to sync turn: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    private void updateOnlineTurn() {
+        isMyTurn = !isMyTurn;
+        updateTurnIndicator();
+    }
+
+    private boolean hasSelectedPiece() {
+        return chessBoard != null && chessBoard.getSelectedPiece() != null;
+    }
+
+    private ChessPiece getSelectedPieceSafe() {
+        return chessBoard != null ? chessBoard.getSelectedPiece() : null;
+    }
+
+    private int getSelectedPieceRow() {
+        ChessPiece selected = getSelectedPieceSafe();
+        return selected != null ? selected.getRow() : -1;
+    }
+
+    private int getSelectedPieceCol() {
+        ChessPiece selected = getSelectedPieceSafe();
+        return selected != null ? selected.getCol() : -1;
+    }
+
     private void restartGame() {
         chessBoard = new ChessBoard();
         movesCount = 0;
@@ -717,6 +1142,16 @@ public class ChessGameActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        if (isOnlineGame) {
+            if (movesListener != null) {
+                FirebaseManager.getInstance().stopListeningForMoves(sessionId, movesListener);
+            }
+            if (boardStateListener != null) {
+                FirebaseManager.getInstance().stopListeningForBoardState(sessionId, boardStateListener);
+            }
+        }
+
         if (isTimedGame && chessTimer != null) {
             chessTimer.stop();
         }
