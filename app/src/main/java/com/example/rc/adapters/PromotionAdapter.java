@@ -23,12 +23,11 @@ public class PromotionAdapter extends RecyclerView.Adapter<PromotionAdapter.Prom
         this.listener = listener;
         this.isWhite = isWhite;
 
-        // Определяем символы в зависимости от цвета
         if (isWhite) {
-            promotionPieces = new String[]{"♕", "♖", "♗", "♘"}; // Белые фигуры
+            promotionPieces = new String[]{"♕", "♖", "♗", "♘"};
             pieceNames = new String[]{"Ферзь", "Ладья", "Слон", "Конь"};
         } else {
-            promotionPieces = new String[]{"♛", "♜", "♝", "♞"}; // Черные фигуры
+            promotionPieces = new String[]{"♛", "♜", "♝", "♞"};
             pieceNames = new String[]{"Ферзь", "Ладья", "Слон", "Конь"};
         }
     }

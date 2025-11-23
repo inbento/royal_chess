@@ -86,9 +86,4 @@ public class ChessSquare extends AppCompatTextView {
         }
     }
 
-
-
-    public int getRow() { return row; }
-    public int getCol() { return col; }
-    public ChessPiece getPiece() { return piece; }
 }

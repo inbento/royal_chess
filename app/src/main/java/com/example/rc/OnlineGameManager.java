@@ -102,7 +102,6 @@ public class OnlineGameManager {
                     if (sessionExists) {
                         connectToExistingSession(potentialSessionId, currentUser);
                     } else {
-                        // Создаем новую сессию
                         createGameSession(currentUser, opponent, preferredColor, timeMinutes, king);
                     }
                 });
@@ -195,10 +194,6 @@ public class OnlineGameManager {
         }
         currentMatchmakingId = null;
         userMatchmakingListener = null;
-    }
-
-    public void getGameSession(String sessionId, ValueEventListener listener) {
-        firebaseManager.getGameSession(sessionId, listener);
     }
 
     private String getKingTypeFromFaction(String faction) {

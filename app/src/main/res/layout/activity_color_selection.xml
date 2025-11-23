@@ -107,7 +107,7 @@
         android:id="@+id/btnStartGame"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:text="🎮 Начать игру"
+        android:text="Начать игру"
         android:textSize="18sp"
         android:textColor="#FFFFFF"
         android:backgroundTint="#FF10B981"

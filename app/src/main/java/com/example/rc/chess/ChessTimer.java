@@ -78,7 +78,6 @@ public class ChessTimer {
                     listener.onTimeUpdate(whiteTimeLeft, blackTimeLeft);
                 }
 
-                // Планируем следующее обновление
                 handler.postDelayed(this, 100);
             }
         };
@@ -91,7 +90,7 @@ public class ChessTimer {
         isPaused = false;
         lastUpdateTime = System.currentTimeMillis();
 
-        handler.removeCallbacks(timerRunnable); // Убедимся что старый удален
+        handler.removeCallbacks(timerRunnable);
         handler.post(timerRunnable);
 
         updateIndicators();
@@ -105,14 +104,11 @@ public class ChessTimer {
             return;
         }
 
-        // Останавливаем текущий таймер
         handler.removeCallbacks(timerRunnable);
 
-        // Переключаем ход
         isWhiteTurn = !isWhiteTurn;
         lastUpdateTime = System.currentTimeMillis();
 
-        // Запускаем снова
         handler.post(timerRunnable);
 
         updateIndicators();
@@ -207,23 +203,4 @@ public class ChessTimer {
         return String.format("%d:%02d", minutes, seconds);
     }
 
-    public boolean isRunning() {
-        return isRunning;
-    }
-
-    public boolean isPaused() {
-        return isPaused;
-    }
-
-    public boolean isWhiteTurn() {
-        return isWhiteTurn;
-    }
-
-    public long getWhiteTimeLeft() {
-        return whiteTimeLeft;
-    }
-
-    public long getBlackTimeLeft() {
-        return blackTimeLeft;
-    }
 }

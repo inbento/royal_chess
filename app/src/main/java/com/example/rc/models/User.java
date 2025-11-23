@@ -8,10 +8,7 @@ public class User {
     private String email;
     private String password;
     private String createdAt;
-    private boolean isOnline;
-    private String sessionId;
     private String onlineId;
-    private long lastSeen;
 
     public User() {}
 
@@ -37,13 +34,6 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
-    public String getSessionId() { return sessionId; }
-    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
-
-    private String generateSessionId() {
-        return UUID.randomUUID().toString() + "_" + System.currentTimeMillis();
-    }
-
     public String getOnlineId() { return onlineId; }
     public void setOnlineId(String onlineId) { this.onlineId = onlineId; }
 

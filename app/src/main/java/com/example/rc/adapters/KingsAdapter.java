@@ -68,11 +68,6 @@ public class KingsAdapter extends RecyclerView.Adapter<KingsAdapter.KingViewHold
         return kings != null ? kings.size() : 0;
     }
 
-    public void updateKings(List<King> newKings) {
-        this.kings = newKings;
-        notifyDataSetChanged();
-    }
-
     static class KingViewHolder extends RecyclerView.ViewHolder {
         ImageView ivKing;
         TextView tvKingName;

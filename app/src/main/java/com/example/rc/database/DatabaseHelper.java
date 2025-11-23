@@ -143,7 +143,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             user.setId(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_USER_ID)));
             user.setUsername(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME)));
             user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)));
-            user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD))); // это теперь хеш
+            user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD)));
             user.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CREATED_AT)));
             cursor.close();
             return user;
@@ -197,33 +197,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             values.put(COLUMN_SALT, newSalt);
         }
 
-        int rowsAffected = db.update(TABLE_USERS, values, COLUMN_USER_ID + " = ?",
-                new String[]{String.valueOf(userId)});
-        return rowsAffected > 0;
-    }
-
-    public User getCurrentUser(int userId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_USERS, null, COLUMN_USER_ID + " = ?",
-                new String[]{String.valueOf(userId)}, null, null, null);
-
-        if (cursor != null && cursor.moveToFirst()) {
-            User user = new User();
-            user.setId(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_USER_ID)));
-            user.setUsername(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME)));
-            user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)));
-            user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD)));
-            user.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CREATED_AT)));
-            cursor.close();
-            return user;
-        }
-        return null;
-    }
-
-    public boolean updateUsername(int userId, String newUsername) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_USERNAME, newUsername);
         int rowsAffected = db.update(TABLE_USERS, values, COLUMN_USER_ID + " = ?",
                 new String[]{String.valueOf(userId)});
         return rowsAffected > 0;

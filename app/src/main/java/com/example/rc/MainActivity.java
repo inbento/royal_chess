@@ -175,10 +175,10 @@ public class MainActivity extends AppCompatActivity {
         builder.setTitle(R.string.select_language)
                 .setItems(languages, (dialog, which) -> {
                     switch (which) {
-                        case 0: // Русский
+                        case 0:
                             changeLanguage("ru");
                             break;
-                        case 1: // Английский
+                        case 1:
                             changeLanguage("en");
                             break;
                     }

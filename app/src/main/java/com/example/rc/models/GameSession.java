@@ -60,16 +60,12 @@ public class GameSession {
     public void setTimeMinutes(int timeMinutes) { this.timeMinutes = timeMinutes; }
 
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
 
     public long getCreatedAt() { return createdAt; }
-    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 
     public String getCurrentFen() { return currentFen; }
-    public void setCurrentFen(String currentFen) { this.currentFen = currentFen; }
 
     public boolean isWhiteTurn() { return isWhiteTurn; }
-    public void setWhiteTurn(boolean whiteTurn) { isWhiteTurn = whiteTurn; }
 
     public boolean isPlayerWhite(String playerId) {
         if (playerId == null) return false;

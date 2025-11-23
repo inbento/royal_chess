@@ -25,7 +25,6 @@ public class TimeSelectionActivity extends AppCompatActivity {
         setContentView(R.layout.activity_time_selection);
         Log.d(TAG, "onCreate started");
 
-        // Получаем текущее время из Intent
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             selectedTimeMinutes = extras.getInt("current_time_minutes", 10);
@@ -45,19 +44,16 @@ public class TimeSelectionActivity extends AppCompatActivity {
             Button btnConfirm = findViewById(R.id.btnConfirm);
             Button btnBack = findViewById(R.id.btnBack);
 
-            // Устанавливаем начальный выбор
             if (radioTimeGroup != null) {
                 setInitialSelection(radioTimeGroup);
             }
 
-            // Обработчик выбора времени
             if (radioTimeGroup != null) {
                 radioTimeGroup.setOnCheckedChangeListener((group, checkedId) -> {
                     handleTimeSelection(checkedId);
                 });
             }
 
-            // Подтверждение выбора
             if (btnConfirm != null) {
                 btnConfirm.setOnClickListener(v -> {
                     Log.d(TAG, "Confirm button clicked, time: " + selectedTimeMinutes);
@@ -65,7 +61,6 @@ public class TimeSelectionActivity extends AppCompatActivity {
                 });
             }
 
-            // Кнопка назад
             if (btnBack != null) {
                 btnBack.setOnClickListener(v -> {
                     Log.d(TAG, "Back button clicked");
@@ -78,7 +73,7 @@ public class TimeSelectionActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error initializing views: " + e.getMessage());
             e.printStackTrace();
-            finish(); // Закрываем активность при ошибке
+            finish();
         }
     }
 
@@ -123,7 +118,6 @@ public class TimeSelectionActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        // Все обработчики уже установлены в initViews()
     }
 
     private void returnToColorSelection() {

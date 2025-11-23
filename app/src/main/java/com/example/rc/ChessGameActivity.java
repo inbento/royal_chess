@@ -49,7 +49,6 @@ public class ChessGameActivity extends AppCompatActivity
     private ChessSquare[][] squares = new ChessSquare[8][8];
     private RecyclerView rvPromotion;
     private PromotionAdapter promotionAdapter;
-    private List<String> moves = new ArrayList<>();
     private int movesCount = 0;
     private LinearLayout promotionDialog;
 
@@ -591,35 +590,6 @@ public class ChessGameActivity extends AppCompatActivity
 
         tvPlayerName.setVisibility(View.VISIBLE);
         tvOpponentName.setVisibility(View.VISIBLE);
-    }
-
-    private void setupKingsForOnline(String playerKingType, String opponentKingType) {
-        int playerKingDrawable = getKingDrawableId(playerKingType);
-        int opponentKingDrawable = getKingDrawableId(opponentKingType);
-
-        ivPlayerKing.setImageResource(playerKingDrawable);
-        ivOpponentKing.setImageResource(opponentKingDrawable);
-
-        if (chessBoard != null) {
-            if (isPlayerWhite) {
-                chessBoard.activateKingAbilityForWhite(playerKingType);
-                chessBoard.activateKingAbilityForBlack(opponentKingType);
-            } else {
-                chessBoard.activateKingAbilityForWhite(opponentKingType);
-                chessBoard.activateKingAbilityForBlack(playerKingType);
-            }
-        }
-    }
-
-    private void setupKingsForOffline(String whiteKingType, String blackKingType) {
-        int whiteKingDrawable = getKingDrawableId(whiteKingType);
-        int blackKingDrawable = getKingDrawableId(blackKingType);
-
-        ivPlayerKing.setImageResource(whiteKingDrawable);
-        ivOpponentKing.setImageResource(blackKingDrawable);
-
-        this.playerKingType = whiteKingType;
-        this.opponentKingType = blackKingType;
     }
 
     private void initKingView() {
@@ -1631,7 +1601,7 @@ public class ChessGameActivity extends AppCompatActivity
             exitData.put("playerId", currentUserId);
             exitData.put("timestamp", System.currentTimeMillis());
             exitData.put("action", "player_left");
-            exitData.put("playerName", getCurrentPlayerName()); // ✅ ДОБАВЛЯЕМ ИМЯ ИГРОКА
+            exitData.put("playerName", getCurrentPlayerName());
 
             FirebaseManager.getInstance().sendPlayerExitNotification(sessionId, exitData);
 
@@ -1721,83 +1691,6 @@ public class ChessGameActivity extends AppCompatActivity
             Log.e("ChessGameActivity", "Error showing opponent left dialog: " + e.getMessage());
         }
     }
-
-    private class AbilityListener implements ChildEventListener {
-        @Override
-        public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
-            try {
-                Map<String, Object> abilityData = (Map<String, Object>) dataSnapshot.getValue();
-                if (abilityData != null) {
-                    String playerId = (String) abilityData.get("playerId");
-                    String kingType = (String) abilityData.get("kingType");
-                    Boolean isWhiteTurn = (Boolean) abilityData.get("isWhiteTurn");
-
-                    if (playerId != null && !playerId.equals(currentUserId) && isWhiteTurn != null) {
-                        applyOpponentAbilityActivation(kingType, isWhiteTurn);
-                    }
-                }
-            } catch (Exception e) {
-                Log.e("ChessGameActivity", "Error processing ability activation", e);
-            }
-        }
-
-        @Override
-        public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
-
-        @Override
-        public void onChildRemoved(DataSnapshot dataSnapshot) {}
-
-        @Override
-        public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
-
-        @Override
-        public void onCancelled(DatabaseError databaseError) {
-            Log.e("ChessGameActivity", "Ability listener cancelled: " + databaseError.getMessage());
-        }
-    }
-
-    private class TransformationListener implements ChildEventListener {
-        @Override
-        public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
-            try {
-                Map<String, Object> transformData = (Map<String, Object>) dataSnapshot.getValue();
-                if (transformData != null) {
-                    String playerId = (String) transformData.get("playerId");
-                    Long rowLong = (Long) transformData.get("row");
-                    Long colLong = (Long) transformData.get("col");
-                    String newPieceType = (String) transformData.get("newPieceType");
-                    Boolean changeColor = (Boolean) transformData.get("changeColor");
-
-                    if (playerId != null && !playerId.equals(currentUserId) &&
-                            rowLong != null && colLong != null) {
-                        applyOpponentPieceTransformation(
-                                rowLong.intValue(),
-                                colLong.intValue(),
-                                newPieceType,
-                                changeColor != null ? changeColor : false
-                        );
-                    }
-                }
-            } catch (Exception e) {
-                Log.e("ChessGameActivity", "Error processing piece transformation", e);
-            }
-        }
-
-        @Override
-        public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {}
-
-        @Override
-        public void onChildRemoved(DataSnapshot dataSnapshot) {}
-
-        @Override
-        public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {}
-
-        @Override
-        public void onCancelled(DatabaseError databaseError) {
-            Log.e("ChessGameActivity", "Transformation listener cancelled: " + databaseError.getMessage());
-        }
-    }
-
     private void checkForCheckmate() {
         if (isGameFinished) return;
 

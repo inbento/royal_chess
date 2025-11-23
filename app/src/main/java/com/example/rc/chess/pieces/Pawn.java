@@ -18,13 +18,10 @@ public class Pawn extends ChessPiece {
         int direction = isWhite ? -1 : 1;
         int startRow = isWhite ? 6 : 1;
 
-        // Обычные ходы вперед
         if (toCol == col) {
-            // Ход на одну клетку вперед
             if (toRow == row + direction && board.getPiece(toRow, toCol) == null) {
                 return true;
             }
-            // Ход на две клетки вперед с начальной позиции
             if (row == startRow && toRow == row + 2 * direction &&
                     board.getPiece(toRow, toCol) == null &&
                     board.getPiece(row + direction, col) == null) {
@@ -32,7 +29,6 @@ public class Pawn extends ChessPiece {
             }
         }
 
-        // Взятие по диагонали вперед
         if (Math.abs(toCol - col) == 1 && toRow == row + direction) {
             ChessPiece target = board.getPiece(toRow, toCol);
             if (target != null && target.isWhite() != isWhite) {
@@ -40,18 +36,15 @@ public class Pawn extends ChessPiece {
             }
         }
 
-        // СПОСОБНОСТЬ ГНОМОВ: ходы назад
         if (board.getActiveKingAbility() != null &&
                 board.getActiveKingAbility().equals("gnome") &&
                 isWhite == board.isWhiteTurn()) {
 
-            // Ход на одну клетку назад
             if (toCol == col && toRow == row - direction &&
                     board.getPiece(toRow, toCol) == null) {
                 return true;
             }
 
-            // Взятие назад по диагонали
             if (Math.abs(toCol - col) == 1 && toRow == row - direction) {
                 ChessPiece target = board.getPiece(toRow, toCol);
                 if (target != null && target.isWhite() != isWhite) {

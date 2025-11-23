@@ -18,8 +18,6 @@ public class ChessBoard {
     private boolean gnomeAbilityActive = false;
     private boolean elfAbilityUsedWhite = false;
     private boolean elfAbilityUsedBlack = false;
-    private int elfAbilityTargetRow = -1;
-    private int elfAbilityTargetCol = -1;
     private boolean humanAbilityUsedWhite = false;
     private boolean humanAbilityUsedBlack = false;
     private int humanAbilityRemainingUsesWhite = 2;
@@ -282,10 +280,6 @@ public class ChessBoard {
         return possibleMoves;
     }
     public boolean isWhiteTurn() { return isWhiteTurn; }
-
-    public boolean isGnomeAbilityActive() {
-        return gnomeAbilityActive;
-    }
 
     public String getActiveKingAbility() {
         if (isWhiteTurn) {
